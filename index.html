@@ -255,6 +255,80 @@ section{margin-top:26px}
 }
 .bar-bud input:focus{border-bottom-color:var(--ink);color:var(--ink)}
 
+/* ── 고정지출 ── */
+.rec-new{display:none;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px;margin-bottom:12px}
+.rec-new.on{display:block}
+.rec-new input,.rec-new select{
+  width:100%;border:1px solid var(--rule);border-radius:9px;padding:10px 12px;
+  font-family:inherit;font-size:14px;background:#FBFBF9;color:var(--ink);outline:none;min-width:0;
+}
+.rec-new input:focus,.rec-new select:focus{border-color:var(--ink)}
+.rec-2{display:flex;gap:8px;margin-top:8px}
+.rec-2 > *{flex:1}
+.rec-new #rec-save{
+  width:100%;margin-top:10px;border:0;background:var(--tap);color:#fff;border-radius:10px;
+  padding:12px;font-family:inherit;font-size:14.5px;font-weight:700;cursor:pointer;
+}
+
+.reclist{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:4px 16px}
+.recrow{display:flex;align-items:center;gap:9px;padding:13px 0}
+.recrow + .recrow{border-top:1px dashed var(--rule)}
+.recrow .b{flex:1;min-width:0}
+.recrow .nm{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recrow .nm em{font-style:normal;font-size:11.5px;color:var(--ink-faint);font-weight:400;margin-left:6px}
+.recrow .cnt{font-size:12px;color:var(--ink-faint);margin-top:2px}
+.recrow.done .nm{color:var(--ink-faint);font-weight:500}
+.recrow .am{font-size:14.5px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink-faint)}
+.recrow .amt-in{
+  width:88px;flex:0 0 auto;border:1px solid var(--rule);border-radius:8px;padding:7px 9px;
+  font-family:inherit;font-size:13.5px;text-align:right;background:#FBFBF9;color:var(--ink);
+  outline:none;font-variant-numeric:tabular-nums;
+}
+.recrow .amt-in:focus{border-color:var(--ink)}
+.recrow .go{
+  flex:0 0 auto;border:0;background:var(--tap);color:#fff;border-radius:8px;padding:8px 12px;
+  font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
+}
+.recrow .go:active{opacity:.85}
+.recrow .rm{border:0;background:transparent;color:#CDD2CB;font-size:15px;cursor:pointer;padding:0 0 0 2px;line-height:1;flex:0 0 auto}
+.recrow .rm:active{color:var(--spend)}
+.rec-all{
+  border-top:1px dashed var(--rule);padding:12px 0 13px;display:flex;
+  align-items:center;justify-content:space-between;gap:10px;
+}
+.rec-all span{font-size:13px;color:var(--ink-soft)}
+.rec-all span b{color:var(--ink);font-weight:700}
+.rec-all button{
+  border:1px solid var(--ink);background:transparent;border-radius:8px;padding:8px 13px;
+  font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;flex:0 0 auto;
+}
+
+/* ── 카테고리 관리 ── */
+.cat-new{display:none;gap:8px;background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:12px;margin-bottom:12px}
+.cat-new.on{display:flex}
+.cat-new input{
+  flex:1;border:1px solid var(--rule);border-radius:9px;padding:9px 11px;
+  font-family:inherit;font-size:13.5px;background:#FBFBF9;color:var(--ink);outline:none;min-width:0;
+}
+.cat-new input:focus{border-color:var(--ink)}
+.cat-new #cat-budget{flex:0 0 88px;text-align:right;font-variant-numeric:tabular-nums}
+.cat-new button{
+  border:0;background:var(--tap);color:#fff;border-radius:9px;padding:9px 14px;
+  font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;flex:0 0 auto;
+}
+.bar-top .l{display:flex;align-items:center;gap:5px;flex:1;min-width:0}
+.bar-top .l input{
+  border:0;background:transparent;font-family:inherit;font-size:13.5px;font-weight:600;
+  color:var(--ink);outline:none;padding:1px 0;border-bottom:1px solid transparent;
+  min-width:0;width:100%;max-width:130px;
+}
+.bar-top .l input:focus{border-bottom-color:var(--ink)}
+.bar-del{
+  border:0;background:transparent;color:#CDD2CB;font-size:14px;cursor:pointer;
+  padding:0 2px;line-height:1;flex:0 0 auto;
+}
+.bar-del:active{color:var(--spend)}
+
 /* 내역 */
 .listbar{display:flex;gap:8px;align-items:center;margin-bottom:12px}
 .listbar input{
@@ -403,7 +477,27 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
   <div class="quick" id="quick"></div>
 </div>
 
-<section id="leak-sec">
+<section>
+  <div class="sec-head">
+    <h2>고정지출</h2>
+    <button id="rec-add">＋ 추가</button>
+  </div>
+  <div class="rec-new" id="rec-new">
+    <input id="rec-name" type="text" placeholder="이름 (예: 관리비)" aria-label="고정지출 이름">
+    <div class="rec-2">
+      <input id="rec-amt" type="text" inputmode="numeric" placeholder="금액" aria-label="금액">
+      <input id="rec-day" type="number" inputmode="numeric" min="1" max="28" placeholder="매월 며칠" aria-label="매월 며칠">
+    </div>
+    <div class="rec-2">
+      <select id="rec-cat" aria-label="카테고리"></select>
+      <select id="rec-pm" aria-label="결제수단"></select>
+    </div>
+    <button id="rec-save">고정지출 추가</button>
+  </div>
+  <div id="reclist"></div>
+</section>
+
+<section>
   <div class="sec-head">
     <h2>새는 곳</h2>
     <p>반복되는 작은 지출</p>
@@ -414,7 +508,12 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
 <section>
   <div class="sec-head">
     <h2>어디에 썼나</h2>
-    <p>숫자를 눌러 예산 수정</p>
+    <button id="cat-add">＋ 추가</button>
+  </div>
+  <div class="cat-new" id="cat-new">
+    <input id="cat-name" type="text" placeholder="카테고리 이름 (예: 의료비)" aria-label="카테고리 이름">
+    <input id="cat-budget" type="text" inputmode="numeric" placeholder="월 예산" aria-label="월 예산">
+    <button id="cat-save">추가</button>
   </div>
   <div class="bars" id="bars"></div>
 </section>
@@ -469,7 +568,7 @@ const store={
   }
 };
 
-const CATS=[
+const DEFAULT_CATS=[
   {id:'food',  name:'식비',   budget:800000},
   {id:'live',  name:'생활',   budget:400000},
   {id:'edu',   name:'교육',   budget:600000},
@@ -477,13 +576,14 @@ const CATS=[
   {id:'fun',   name:'여가',   budget:250000},
   {id:'etc',   name:'기타',   budget:200000}
 ];
-const CATNAME=Object.fromEntries(CATS.map(c=>[c.id,c.name]));
+const catName=id=>{const c=db.cats.find(x=>x.id===id);return c?c.name:''};
+const catBudget=c=>db.budgets[c.id]??c.budget??0;
 const SMALL=10000; // 소액 기준
 
 const PMTYPE={credit:'신용카드',debit:'체크카드',cash:'현금'};
 const DEFAULT_PMS=[{id:'cash',name:'현금',type:'cash'}];
 
-let db={tx:[],budgets:{},pms:[...DEFAULT_PMS],cycleStart:1,v2:true};
+let db={tx:[],budgets:{},cats:DEFAULT_CATS.map(c=>({...c})),pms:[...DEFAULT_PMS],recurring:[],cycleStart:1,v2:true};
 let mode='out', cat='food', pm='cash', editing=null, filterDate=null;
 let cur=new Date();
 
@@ -527,6 +627,19 @@ function cardOpenAmount(card){
   return {sum,start,end};
 }
 
+// 고정지출이 현재 보고 있는 기간 안에서 몇 일에 해당하는지
+function recDateInCycle(day,range){
+  const d=Math.min(Math.max(day||1,1),28);
+  let c=new Date(range.start.getFullYear(),range.start.getMonth(),d);
+  if(c<range.start) c=new Date(range.start.getFullYear(),range.start.getMonth()+1,d);
+  return (c>=range.start&&c<range.end)?c:null;
+}
+
+// 이 기간에 이미 기록됐는지 (같은 고정지출 id로 들어간 기록이 있는지)
+function recApplied(recId,range){
+  return db.tx.find(t=>t.r===recId&&dstr2date(t.d)>=range.start&&dstr2date(t.d)<range.end);
+}
+
 function toast(msg){
   const t=$('toast'); t.textContent=msg; t.classList.add('on');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),1600);
@@ -539,12 +652,15 @@ async function init(){
     db.tx=saved.tx||[];
     db.budgets=saved.budgets||{};
     db.pms=(saved.pms&&saved.pms.length)?saved.pms:[...DEFAULT_PMS];
+    db.cats=(saved.cats&&saved.cats.length)?saved.cats:DEFAULT_CATS.map(c=>({...c}));
     db.cycleStart=Number(saved.cycleStart)||1;
+    db.recurring=saved.recurring||[];
     // 예전엔 저축과 수입이 한 칸이었음 — 기존 기록은 저축으로 옮김
     if(!saved.v2){db.tx.forEach(t=>{if(t.t==='in')t.t='save'});db.v2=true;await store.set(db)}
     else db.v2=true;
   }
   pm=db.pms[0].id;
+  cat=db.cats[0].id;
   $('date').value=ymd(new Date());
   $('cycle-start').value=db.cycleStart;
   renderCats(); renderPMs(); bindEvents(); render();
@@ -594,8 +710,126 @@ async function delPM(id){
   renderPMs(); render(); toast('삭제했어요');
 }
 
+/* ── 고정지출 ── */
+function fillRecSelects(){
+  $('rec-cat').innerHTML=db.cats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  $('rec-cat').value='fixed';
+  $('rec-pm').innerHTML=db.pms.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+}
+
+async function addRecurring(){
+  const m=$('rec-name').value.trim();
+  const a=Number($('rec-amt').value.replace(/[^\d]/g,''));
+  const day=Math.min(Math.max(Number($('rec-day').value)||1,1),28);
+  if(!m){$('rec-name').focus();return toast('이름을 적어주세요')}
+  if(!a){$('rec-amt').focus();return toast('금액을 적어주세요')}
+  db.recurring.push({id:'r'+Date.now().toString(36),m,a,day,c:$('rec-cat').value,p:$('rec-pm').value,on:true});
+  await store.set(db);
+  $('rec-name').value=''; $('rec-amt').value=''; $('rec-day').value='';
+  $('rec-new').classList.remove('on');
+  render(); toast(`${m} 등록했어요`);
+}
+
+async function delRecurring(id){
+  const r=db.recurring.find(x=>x.id===id); if(!r)return;
+  if(!confirm(`'${r.m}' 고정지출을 지울까요? 이미 기록된 내역은 그대로 남습니다.`))return;
+  db.recurring=db.recurring.filter(x=>x.id!==id);
+  await store.set(db); render(); toast('삭제했어요');
+}
+
+async function applyRecurring(id,amount){
+  const r=db.recurring.find(x=>x.id===id); if(!r)return;
+  const range=cycleRange(cur,db.cycleStart);
+  if(recApplied(id,range))return toast('이미 기록했어요');
+  const when=recDateInCycle(r.day,range);
+  if(!when)return toast('이 기간에 해당 날짜가 없어요');
+  const a=Number(amount)||r.a;
+  db.tx.push({
+    id:Date.now()+'-'+Math.random().toString(36).slice(2,7),
+    d:ymd(when), a, t:'out', c:r.c, p:r.p, m:r.m, r:r.id
+  });
+  if(a!==r.a)r.a=a; // 다음 달엔 이번에 넣은 금액이 기본값
+  await store.set(db);
+  render(); toast(`${r.m} ${won(a)}원 기록했어요`);
+}
+
+async function applyAllRecurring(){
+  const range=cycleRange(cur,db.cycleStart);
+  let n=0;
+  db.recurring.filter(r=>r.on!==false).forEach(r=>{
+    if(recApplied(r.id,range))return;
+    const when=recDateInCycle(r.day,range); if(!when)return;
+    db.tx.push({
+      id:Date.now()+'-'+Math.random().toString(36).slice(2,7)+n,
+      d:ymd(when), a:r.a, t:'out', c:r.c, p:r.p, m:r.m, r:r.id
+    });
+    n++;
+  });
+  if(!n)return toast('넣을 게 없어요');
+  await store.set(db); render(); toast(`${n}건 기록했어요`);
+}
+
+function renderRecurring(){
+  const box=$('reclist');
+  if(!db.recurring.length){
+    box.innerHTML=`<div class="empty"><b>고정지출이 없어요</b>관리비, 통신비, 보험료처럼 매달 같은 날 나가는 걸 등록해두면 매달 한 번에 넣을 수 있습니다.</div>`;
+    return;
+  }
+  const range=cycleRange(cur,db.cycleStart);
+  const items=db.recurring.slice().sort((a,b)=>a.day-b.day);
+  let pendingSum=0,pendingN=0;
+
+  let html='<div class="reclist">';
+  html+=items.map(r=>{
+    const done=recApplied(r.id,range);
+    const when=recDateInCycle(r.day,range);
+    if(!done&&when){pendingSum+=r.a;pendingN++}
+    if(done){
+      return `<div class="recrow done">
+        <div class="b">
+          <div class="nm">${esc(r.m)}<em>${fmtMD(dstr2date(done.d))} 기록됨</em></div>
+          <div class="cnt">${catName(r.c)} · ${esc(pmName(r.p))}</div>
+        </div>
+        <span class="am">${won(done.a)}원</span>
+        <button class="rm" data-rmrec="${r.id}" aria-label="${esc(r.m)} 삭제">×</button>
+      </div>`;
+    }
+    return `<div class="recrow">
+      <div class="b">
+        <div class="nm">${esc(r.m)}<em>매월 ${r.day}일</em></div>
+        <div class="cnt">${catName(r.c)} · ${esc(pmName(r.p))}</div>
+      </div>
+      <input class="amt-in" type="text" inputmode="numeric" data-ramt="${r.id}" value="${won(r.a)}" aria-label="${esc(r.m)} 금액">
+      <button class="go" data-go="${r.id}">넣기</button>
+      <button class="rm" data-rmrec="${r.id}" aria-label="${esc(r.m)} 삭제">×</button>
+    </div>`;
+  }).join('');
+
+  if(pendingN){
+    html+=`<div class="rec-all">
+      <span>아직 안 넣은 <b>${pendingN}건 · ${won(pendingSum)}원</b></span>
+      <button id="rec-all-btn">전부 넣기</button>
+    </div>`;
+  }
+  html+='</div>';
+  box.innerHTML=html;
+
+  box.querySelectorAll('[data-ramt]').forEach(inp=>{
+    inp.addEventListener('input',e=>{
+      const raw=e.target.value.replace(/[^\d]/g,'');
+      e.target.value=raw?Number(raw).toLocaleString('ko-KR'):'';
+    });
+  });
+  box.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{
+    const inp=box.querySelector(`[data-ramt="${b.dataset.go}"]`);
+    applyRecurring(b.dataset.go,inp?inp.value.replace(/[^\d]/g,''):null);
+  });
+  box.querySelectorAll('[data-rmrec]').forEach(b=>b.onclick=()=>delRecurring(b.dataset.rmrec));
+  const all=$('rec-all-btn'); if(all)all.onclick=applyAllRecurring;
+}
+
 function renderCats(){
-  $('cats').innerHTML=CATS.map(c=>
+  $('cats').innerHTML=db.cats.map(c=>
     `<button class="cat" data-cat="${c.id}" aria-pressed="${c.id===cat}">${c.name}</button>`).join('');
   $('cats').querySelectorAll('.cat').forEach(b=>b.onclick=()=>{
     cat=b.dataset.cat;
@@ -630,6 +864,25 @@ function bindEvents(){
   $('prev').onclick=()=>{cur.setMonth(cur.getMonth()-1);render()};
   $('next').onclick=()=>{cur.setMonth(cur.getMonth()+1);render()};
   $('export').onclick=doExport;
+  $('rec-add').onclick=()=>{
+    const box=$('rec-new'); box.classList.toggle('on');
+    if(box.classList.contains('on')){fillRecSelects();$('rec-name').focus()}
+  };
+  $('rec-save').onclick=addRecurring;
+  $('cat-add').onclick=()=>{
+    const box=$('cat-new'); box.classList.toggle('on');
+    if(box.classList.contains('on'))$('cat-name').focus();
+  };
+  $('cat-save').onclick=addCat;
+  $('cat-name').addEventListener('keydown',e=>{if(e.key==='Enter')addCat()});
+  $('cat-budget').addEventListener('input',e=>{
+    const raw=e.target.value.replace(/[^\d]/g,'');
+    e.target.value=raw?Number(raw).toLocaleString('ko-KR'):'';
+  });
+  $('rec-amt').addEventListener('input',e=>{
+    const raw=e.target.value.replace(/[^\d]/g,'');
+    e.target.value=raw?Number(raw).toLocaleString('ko-KR'):'';
+  });
   $('filter-date').addEventListener('change',()=>{
     filterDate=$('filter-date').value||null;
     render();
@@ -698,7 +951,7 @@ async function add(){
     a:amt, t:mode,
     c:mode==='out'?cat:mode,
     p:mode==='out'?pm:null,
-    m:($('memo').value||'').trim()||(mode==='save'?'저축':mode==='in'?'수입':CATNAME[cat])
+    m:($('memo').value||'').trim()||(mode==='save'?'저축':mode==='in'?'수입':catName(cat))
   };
 
   if(editing){
@@ -758,7 +1011,7 @@ function render(){
   const daily=total/Math.max(elapsed,1);
   $('daily').textContent=won(daily)+'원';
 
-  const budget=CATS.reduce((s,c)=>s+(db.budgets[c.id]??c.budget),0);
+  const budget=db.cats.reduce((s,c)=>s+catBudget(c),0);
   const projected=daily*cycleLen;
   const pace=$('pace');
   if(!out.length){
@@ -775,6 +1028,7 @@ function render(){
   }
 
   renderFlow(incomeAmt,total,savedAmt);
+  renderRecurring();
   renderLeaks(out,elapsed);
   renderBars(out);
   renderPMList(out);
@@ -831,7 +1085,7 @@ function renderLeaks(out,elapsed){
         <div class="leak-n num">${g.n}회</div>
         <div class="leak-b">
           <div class="leak-t">${esc(g.name)}</div>
-          <div class="leak-s">평균 ${won(g.sum/g.n)}원 · ${CATNAME[g.cat]||''}</div>
+          <div class="leak-s">평균 ${won(g.sum/g.n)}원 · ${catName(g.cat)}</div>
         </div>
         <div class="leak-a num">${won(g.sum)}원</div>
       </div>`).join('');
@@ -905,15 +1159,18 @@ function renderPMList(out){
 function renderBars(out){
   const by={};
   out.forEach(t=>by[t.c]=(by[t.c]||0)+t.a);
-  $('bars').innerHTML=CATS.map(c=>{
+  $('bars').innerHTML=db.cats.map(c=>{
     const spent=by[c.id]||0;
-    const bud=db.budgets[c.id]??c.budget;
+    const bud=catBudget(c);
     const p=bud?Math.min(spent/bud*100,100):0;
     const cls=spent>bud?'over':(spent>bud*0.8?'near':'');
     const left=bud-spent;
     return `<div class="bar">
       <div class="bar-top">
-        <span class="l">${c.name}</span>
+        <span class="l">
+          <input type="text" data-cname="${c.id}" value="${esc(c.name)}" aria-label="카테고리 이름">
+          <button class="bar-del" data-cdel="${c.id}" aria-label="${esc(c.name)} 삭제">×</button>
+        </span>
         <span class="r"><b class="num">${won(spent)}</b>원 ${bud?`/ ${won(bud)}원`:''}</span>
       </div>
       <div class="track"><div class="fill ${cls}" style="width:${p}%"></div></div>
@@ -929,11 +1186,47 @@ function renderBars(out){
       await store.set(db); render(); toast('예산을 바꿨어요');
     };
   });
+  $('bars').querySelectorAll('input[data-cname]').forEach(inp=>{
+    inp.onchange=async()=>{
+      const c=db.cats.find(x=>x.id===inp.dataset.cname); if(!c)return;
+      const v=inp.value.trim();
+      if(!v){inp.value=c.name;return}
+      c.name=v;
+      await store.set(db); renderCats(); render(); toast('이름을 바꿨어요');
+    };
+  });
+  $('bars').querySelectorAll('[data-cdel]').forEach(b=>b.onclick=()=>delCat(b.dataset.cdel));
+}
+
+async function addCat(){
+  const name=$('cat-name').value.trim();
+  if(!name){$('cat-name').focus();return toast('이름을 적어주세요')}
+  const budget=Number($('cat-budget').value.replace(/[^\d]/g,''))||0;
+  db.cats.push({id:'c'+Date.now().toString(36),name,budget});
+  await store.set(db);
+  $('cat-name').value=''; $('cat-budget').value=''; $('cat-new').classList.remove('on');
+  renderCats(); render(); toast(`${name} 추가했어요`);
+}
+
+async function delCat(id){
+  if(db.cats.length<=1)return toast('카테고리는 하나 이상 있어야 해요');
+  const c=db.cats.find(x=>x.id===id); if(!c)return;
+  const used=db.tx.filter(t=>t.c===id).length;
+  const usedRec=db.recurring.filter(r=>r.c===id).length;
+  const to=db.cats.find(x=>x.id!==id);
+  if((used||usedRec)&&!confirm(`'${c.name}'에 ${used}건의 기록${usedRec?`과 고정지출 ${usedRec}건`:''}이 있습니다. 모두 '${to.name}'으로 옮기고 삭제할까요?`))return;
+  db.tx.forEach(t=>{if(t.c===id)t.c=to.id});
+  db.recurring.forEach(r=>{if(r.c===id)r.c=to.id});
+  db.cats=db.cats.filter(x=>x.id!==id);
+  delete db.budgets[id];
+  if(cat===id)cat=db.cats[0].id;
+  await store.set(db);
+  renderCats(); render(); toast('삭제했어요');
 }
 
 function txRow(t){
   return `<div class="row" data-edit="${t.id}" role="button" tabindex="0">
-    <span class="row-c">${t.t==='save'?'저축':t.t==='in'?'수입':CATNAME[t.c]||''}</span>
+    <span class="row-c">${t.t==='save'?'저축':t.t==='in'?'수입':catName(t.c)}</span>
     <span class="row-m">${esc(t.m)}${t.t==='out'?`<span class="row-pm">${esc(pmName(t.p))}</span>`:''}</span>
     <span class="row-a num ${t.t==='in'?'plus':'minus'}">${t.t==='in'?'+':'−'}${won(t.a)}</span>
     <button class="row-x" data-del="${t.id}" aria-label="삭제">×</button>
