@@ -379,6 +379,33 @@ section{margin-top:26px}
 .empty b{display:block;color:var(--ink);font-weight:700;font-size:15px;margin-bottom:5px}
 
 /* 설정 */
+/* ── 동기화 ── */
+.sec-head #sync-status{font-size:12.5px;color:var(--ink-faint)}
+.sync-form{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px}
+.sync-help{font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:11px}
+.sync-form textarea,.sync-form input{
+  width:100%;border:1px solid var(--rule);border-radius:9px;padding:10px 12px;
+  font-family:inherit;font-size:13px;background:#FBFBF9;color:var(--ink);outline:none;
+  resize:vertical;margin-bottom:8px;
+}
+.sync-form textarea{font-family:ui-monospace,monospace;font-size:12px;line-height:1.5}
+.sync-form input:focus,.sync-form textarea:focus{border-color:var(--ink)}
+.sync-form button{
+  width:100%;border:0;background:var(--tap);color:#fff;border-radius:10px;padding:12px;
+  font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;
+}
+.sync-connected{
+  display:none;background:var(--card);border:1px solid var(--rule);border-radius:14px;
+  padding:14px 16px;align-items:center;justify-content:space-between;gap:10px;
+}
+.sync-connected.on{display:flex}
+.sync-connected p{font-size:13.5px;color:var(--ink-soft)}
+.sync-connected b{color:var(--save);font-weight:700}
+.sync-connected button{
+  border:1px solid var(--rule);background:transparent;border-radius:8px;padding:8px 13px;
+  font-family:inherit;font-size:13px;color:var(--ink-soft);cursor:pointer;flex:0 0 auto;
+}
+
 .tools{display:flex;gap:8px;margin-top:12px}
 .tools button{
   flex:1;border:1px solid var(--rule);background:transparent;border-radius:10px;
@@ -538,12 +565,35 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
   <div id="list"></div>
 </section>
 
+<section>
+  <div class="sec-head">
+    <h2>기기 간 동기화</h2>
+    <p id="sync-status">연결 안 됨</p>
+  </div>
+
+  <div class="sync-form" id="sync-form">
+    <p class="sync-help">
+      직접 만든 Firebase 프로젝트가 필요합니다. Firebase 콘솔에서 프로젝트 생성 →
+      Firestore 데이터베이스 만들기 → 웹 앱 추가 후 나오는 설정 코드를 그대로 붙여넣으세요.
+      동기화 코드는 기기끼리 똑같이 입력하면 되는, 비밀번호 같은 문자열입니다.
+    </p>
+    <textarea id="sync-cfg" rows="5" placeholder="const firebaseConfig = { apiKey: &quot;...&quot;, ... }; 를 통째로 붙여넣으세요" aria-label="Firebase 설정"></textarea>
+    <input id="sync-code" type="text" placeholder="동기화 코드 (8자 이상, 기기끼리 동일하게)" aria-label="동기화 코드">
+    <button id="sync-connect">연결</button>
+  </div>
+
+  <div class="sync-connected" id="sync-connected">
+    <p>코드 <b id="sync-code-label"></b>로 동기화 중입니다.</p>
+    <button id="sync-disconnect">연결 해제</button>
+  </div>
+</section>
+
 <div class="tools">
   <button id="export">데이터 내보내기</button>
   <button id="import">불러오기</button>
 </div>
 
-<footer>기록은 이 기기에 저장됩니다</footer>
+<footer>기록은 이 기기에 저장되며, 연결 시 등록한 Firebase에도 동기화됩니다</footer>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -552,21 +602,155 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
 <script>
 /* ── 저장소: Claude 미리보기(window.storage)와 일반 웹(localStorage) 모두 지원 ── */
 const KEY='gagyebu:v1';
+const SYNC_KEY='gagyebu:sync:v1'; // Firebase 설정은 기기 로컬에만 (Firestore로 동기화하지 않음)
 const store={
-  async get(){
+  async get(key=KEY){
     if(window.storage){
-      try{const r=await window.storage.get(KEY);return r&&r.value?JSON.parse(r.value):null}catch(e){return null}
+      try{const r=await window.storage.get(key);return r&&r.value?JSON.parse(r.value):null}catch(e){return null}
     }
-    try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}catch(e){return null}
+    try{const s=localStorage.getItem(key);return s?JSON.parse(s):null}catch(e){return null}
   },
-  async set(v){
+  async set(v,key=KEY){
     const s=JSON.stringify(v);
     if(window.storage){
-      try{await window.storage.set(KEY,s);return}catch(e){}
+      try{await window.storage.set(key,s);return}catch(e){}
     }
-    try{localStorage.setItem(KEY,s)}catch(e){}
+    try{localStorage.setItem(key,s)}catch(e){}
   }
 };
+
+/* ── 기기 간 동기화 (Firebase Firestore) ──
+   각 항목(tx/cats/pms/recurring)은 id 기준으로 합치고, 같은 id가 양쪽에 있으면
+   ts(마지막 수정 시각)가 더 큰 쪽을 채택한다. 삭제는 tombstone(deleted 목록)으로 남겨서
+   병합 시 되살아나지 않게 막는다. budgets·cycleStart는 settingsTs로 묶어서 통째로 비교. */
+let fbMod=null, fsApp=null, fsDb=null, fsUnsub=null, fsDocRef=null, pushTimer=null, firstSnapshotDone=false;
+
+async function loadFirebaseSDK(){
+  if(fbMod)return fbMod;
+  const [{initializeApp},{getFirestore,doc,onSnapshot,setDoc}]=await Promise.all([
+    import('https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js'),
+    import('https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js')
+  ]);
+  fbMod={initializeApp,getFirestore,doc,onSnapshot,setDoc};
+  return fbMod;
+}
+
+function parseFirebaseConfig(text){
+  try{
+    let t=(text||'').trim();
+    t=t.replace(/^\s*(export\s+default\s+|const\s+\w+\s*=\s*)/,'');
+    t=t.replace(/;\s*$/,'');
+    const obj=(new Function('return ('+t+')'))();
+    if(obj&&obj.apiKey&&obj.projectId)return obj;
+  }catch(e){}
+  return null;
+}
+
+function mergeById(localArr,remoteArr,tombLocal,tombRemote){
+  const tomb=new Set([...(tombLocal||[]),...(tombRemote||[])]);
+  const map={};
+  (localArr||[]).forEach(x=>{if(!tomb.has(x.id))map[x.id]=x});
+  (remoteArr||[]).forEach(x=>{
+    if(tomb.has(x.id))return;
+    const cur=map[x.id];
+    if(!cur||(x.ts||0)>=(cur.ts||0))map[x.id]=x;
+  });
+  return {list:Object.values(map),tomb:[...tomb]};
+}
+
+function mergeRemoteIntoLocal(remote){
+  if(!remote)return;
+  const rt=mergeById(db.tx,remote.tx,db.deleted.tx,remote.deleted&&remote.deleted.tx);
+  db.tx=rt.list; db.deleted.tx=rt.tomb;
+
+  const rc=mergeById(db.cats,remote.cats,db.deleted.cats,remote.deleted&&remote.deleted.cats);
+  if(rc.list.length)db.cats=rc.list;
+  db.deleted.cats=rc.tomb;
+
+  const rp=mergeById(db.pms,remote.pms,db.deleted.pms,remote.deleted&&remote.deleted.pms);
+  if(rp.list.length)db.pms=rp.list;
+  db.deleted.pms=rp.tomb;
+
+  const rr=mergeById(db.recurring,remote.recurring,db.deleted.recurring,remote.deleted&&remote.deleted.recurring);
+  db.recurring=rr.list; db.deleted.recurring=rr.tomb;
+
+  if((remote.settingsTs||0)>(db.settingsTs||0)){
+    db.budgets=remote.budgets||{};
+    db.cycleStart=remote.cycleStart||1;
+    db.settingsTs=remote.settingsTs;
+    const el=$('cycle-start'); if(el)el.value=db.cycleStart;
+  }
+}
+
+function syncPush(){
+  if(!fsDocRef||!fbMod)return;
+  clearTimeout(pushTimer);
+  pushTimer=setTimeout(()=>{
+    const payload={
+      tx:db.tx, cats:db.cats, pms:db.pms, recurring:db.recurring,
+      budgets:db.budgets, cycleStart:db.cycleStart, settingsTs:db.settingsTs||0,
+      deleted:db.deleted
+    };
+    fbMod.setDoc(fsDocRef,payload).catch(e=>console.error('sync push',e));
+  },700);
+}
+
+async function persist(){
+  await store.set(db);
+  syncPush();
+}
+
+function updateSyncUI(connected,connecting){
+  $('sync-status').textContent=connecting?'연결하는 중…':(connected?'동기화 중':'연결 안 됨');
+  $('sync-form').style.display=connected?'none':'block';
+  $('sync-connected').classList.toggle('on',connected);
+  if(connected&&syncCfg)$('sync-code-label').textContent=syncCfg.code;
+}
+
+async function connectSync(cfgObj,code,silent){
+  try{
+    updateSyncUI(false,true);
+    const fb=await loadFirebaseSDK();
+    fsApp=fb.initializeApp(cfgObj,'gagyebu-'+Date.now());
+    fsDb=fb.getFirestore(fsApp);
+    fsDocRef=fb.doc(fsDb,'gagyebu',code);
+    firstSnapshotDone=false;
+    fsUnsub=fb.onSnapshot(fsDocRef,snap=>{
+      if(snap.metadata.hasPendingWrites)return; // 내가 방금 쓴 내용의 메아리 — 무시
+      const remote=snap.exists()?snap.data():null;
+      if(remote)mergeRemoteIntoLocal(remote);
+      if(!firstSnapshotDone){
+        firstSnapshotDone=true;
+        persist(); // 이 기기에만 있던 오프라인 변경분을 한 번 합쳐서 올림
+      }else{
+        store.set(db);
+      }
+      updateSyncUI(true);
+      render();
+    },err=>{
+      console.error('sync listen',err);
+      toast('동기화 연결에 실패했어요');
+      updateSyncUI(false);
+    });
+    syncCfg={code,config:cfgObj,enabled:true};
+    await store.set(syncCfg,SYNC_KEY);
+    updateSyncUI(true);
+    if(!silent)toast('동기화를 연결했어요');
+  }catch(e){
+    console.error('sync connect',e);
+    toast('연결 실패 — 설정을 확인해주세요');
+    updateSyncUI(false);
+  }
+}
+
+async function disconnectSync(){
+  if(fsUnsub)fsUnsub();
+  fsUnsub=null; fsDocRef=null; fsApp=null; fsDb=null;
+  syncCfg={code:'',config:null,enabled:false};
+  await store.set(syncCfg,SYNC_KEY);
+  updateSyncUI(false);
+  toast('연결을 해제했어요');
+}
 
 const DEFAULT_CATS=[
   {id:'food',  name:'식비',   budget:800000},
@@ -583,7 +767,9 @@ const SMALL=10000; // 소액 기준
 const PMTYPE={credit:'신용카드',debit:'체크카드',cash:'현금'};
 const DEFAULT_PMS=[{id:'cash',name:'현금',type:'cash'}];
 
-let db={tx:[],budgets:{},cats:DEFAULT_CATS.map(c=>({...c})),pms:[...DEFAULT_PMS],recurring:[],cycleStart:1,v2:true};
+let db={tx:[],budgets:{},cats:DEFAULT_CATS.map(c=>({...c})),pms:[...DEFAULT_PMS],recurring:[],
+  deleted:{tx:[],cats:[],pms:[],recurring:[]},settingsTs:0,cycleStart:1,v2:true};
+let syncCfg={code:'',config:null,enabled:false};
 let mode='out', cat='food', pm='cash', editing=null, filterDate=null;
 let cur=new Date();
 
@@ -655,8 +841,10 @@ async function init(){
     db.cats=(saved.cats&&saved.cats.length)?saved.cats:DEFAULT_CATS.map(c=>({...c}));
     db.cycleStart=Number(saved.cycleStart)||1;
     db.recurring=saved.recurring||[];
+    db.deleted=saved.deleted||{tx:[],cats:[],pms:[],recurring:[]};
+    db.settingsTs=saved.settingsTs||0;
     // 예전엔 저축과 수입이 한 칸이었음 — 기존 기록은 저축으로 옮김
-    if(!saved.v2){db.tx.forEach(t=>{if(t.t==='in')t.t='save'});db.v2=true;await store.set(db)}
+    if(!saved.v2){db.tx.forEach(t=>{if(t.t==='in')t.t='save'});db.v2=true;await persist()}
     else db.v2=true;
   }
   pm=db.pms[0].id;
@@ -664,6 +852,12 @@ async function init(){
   $('date').value=ymd(new Date());
   $('cycle-start').value=db.cycleStart;
   renderCats(); renderPMs(); bindEvents(); render();
+
+  const savedSync=await store.get(SYNC_KEY);
+  if(savedSync&&savedSync.enabled&&savedSync.config&&savedSync.code){
+    syncCfg=savedSync;
+    connectSync(savedSync.config,savedSync.code,true);
+  }
 }
 
 function pmOf(id){return db.pms.find(p=>p.id===id)}
@@ -688,13 +882,13 @@ async function addPM(){
   if(!name){$('pm-name').focus();return toast('카드 이름을 적어주세요')}
   const type=$('pm-type').value;
   const id='p'+Date.now().toString(36);
-  const card={id,name,type};
+  const card={id,name,type,ts:Date.now()};
   if(type==='credit'){
     card.billDay=Math.min(Math.max(Number($('pm-billday').value)||1,1),28);
   }
   db.pms.push(card);
   pm=id;
-  await store.set(db);
+  await persist();
   $('pm-name').value=''; $('pm-billday').value=''; $('pm-new').classList.remove('on');
   renderPMs(); render(); toast(`${name} 추가했어요`);
 }
@@ -706,7 +900,8 @@ async function delPM(id){
   db.pms=db.pms.filter(x=>x.id!==id);
   if(!db.pms.length)db.pms=[...DEFAULT_PMS];
   if(pm===id)pm=db.pms[0].id;
-  await store.set(db);
+  db.deleted.pms.push(id);
+  await persist();
   renderPMs(); render(); toast('삭제했어요');
 }
 
@@ -723,8 +918,8 @@ async function addRecurring(){
   const day=Math.min(Math.max(Number($('rec-day').value)||1,1),28);
   if(!m){$('rec-name').focus();return toast('이름을 적어주세요')}
   if(!a){$('rec-amt').focus();return toast('금액을 적어주세요')}
-  db.recurring.push({id:'r'+Date.now().toString(36),m,a,day,c:$('rec-cat').value,p:$('rec-pm').value,on:true});
-  await store.set(db);
+  db.recurring.push({id:'r'+Date.now().toString(36),m,a,day,c:$('rec-cat').value,p:$('rec-pm').value,on:true,ts:Date.now()});
+  await persist();
   $('rec-name').value=''; $('rec-amt').value=''; $('rec-day').value='';
   $('rec-new').classList.remove('on');
   render(); toast(`${m} 등록했어요`);
@@ -734,7 +929,8 @@ async function delRecurring(id){
   const r=db.recurring.find(x=>x.id===id); if(!r)return;
   if(!confirm(`'${r.m}' 고정지출을 지울까요? 이미 기록된 내역은 그대로 남습니다.`))return;
   db.recurring=db.recurring.filter(x=>x.id!==id);
-  await store.set(db); render(); toast('삭제했어요');
+  db.deleted.recurring.push(id);
+  await persist(); render(); toast('삭제했어요');
 }
 
 async function applyRecurring(id,amount){
@@ -746,10 +942,10 @@ async function applyRecurring(id,amount){
   const a=Number(amount)||r.a;
   db.tx.push({
     id:Date.now()+'-'+Math.random().toString(36).slice(2,7),
-    d:ymd(when), a, t:'out', c:r.c, p:r.p, m:r.m, r:r.id
+    d:ymd(when), a, t:'out', c:r.c, p:r.p, m:r.m, r:r.id, ts:Date.now()
   });
-  if(a!==r.a)r.a=a; // 다음 달엔 이번에 넣은 금액이 기본값
-  await store.set(db);
+  if(a!==r.a){r.a=a;r.ts=Date.now();} // 다음 달엔 이번에 넣은 금액이 기본값
+  await persist();
   render(); toast(`${r.m} ${won(a)}원 기록했어요`);
 }
 
@@ -761,12 +957,12 @@ async function applyAllRecurring(){
     const when=recDateInCycle(r.day,range); if(!when)return;
     db.tx.push({
       id:Date.now()+'-'+Math.random().toString(36).slice(2,7)+n,
-      d:ymd(when), a:r.a, t:'out', c:r.c, p:r.p, m:r.m, r:r.id
+      d:ymd(when), a:r.a, t:'out', c:r.c, p:r.p, m:r.m, r:r.id, ts:Date.now()
     });
     n++;
   });
   if(!n)return toast('넣을 게 없어요');
-  await store.set(db); render(); toast(`${n}건 기록했어요`);
+  await persist(); render(); toast(`${n}건 기록했어요`);
 }
 
 function renderRecurring(){
@@ -855,8 +1051,8 @@ function bindEvents(){
     let v=Number($('cycle-start').value)||1;
     v=Math.min(Math.max(v,1),28);
     $('cycle-start').value=v;
-    db.cycleStart=v;
-    await store.set(db); render(); toast('시작일을 바꿨어요');
+    db.cycleStart=v; db.settingsTs=Date.now();
+    await persist(); render(); toast('시작일을 바꿨어요');
   });
   $('m-out').onclick=()=>setMode('out');
   $('m-save').onclick=()=>setMode('save');
@@ -892,6 +1088,16 @@ function bindEvents(){
   };
   $('import').onclick=()=>$('file').click();
   $('file').onchange=doImport;
+  $('sync-connect').onclick=async()=>{
+    const code=$('sync-code').value.trim();
+    const cfg=parseFirebaseConfig($('sync-cfg').value);
+    if(code.length<8)return toast('동기화 코드를 8자 이상 적어주세요');
+    if(!cfg)return toast('Firebase 설정을 다시 확인해주세요');
+    await connectSync(cfg,code);
+  };
+  $('sync-disconnect').onclick=async()=>{
+    if(confirm('연결을 해제할까요? 이 기기에 저장된 기록은 그대로 남습니다.'))await disconnectSync();
+  };
 }
 
 function setMode(m){
@@ -951,19 +1157,20 @@ async function add(){
     a:amt, t:mode,
     c:mode==='out'?cat:mode,
     p:mode==='out'?pm:null,
-    m:($('memo').value||'').trim()||(mode==='save'?'저축':mode==='in'?'수입':catName(cat))
+    m:($('memo').value||'').trim()||(mode==='save'?'저축':mode==='in'?'수입':catName(cat)),
+    ts:Date.now()
   };
 
   if(editing){
     const t=db.tx.find(x=>x.id===editing);
     if(t)Object.assign(t,fields);
-    await store.set(db);
+    await persist();
     cancelEdit(); render();
     return toast('수정했어요');
   }
 
   db.tx.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,7),...fields});
-  await store.set(db);
+  await persist();
   $('amt').value=''; $('memo').value=''; $('amt').focus();
   render();
   toast(mode==='save'?`${won(amt)}원 모았어요`:mode==='in'?`${won(amt)}원 들어왔어요`:`${won(amt)}원 기록했어요`);
@@ -972,7 +1179,8 @@ async function add(){
 async function del(id){
   if(editing===id)cancelEdit();
   db.tx=db.tx.filter(t=>t.id!==id);
-  await store.set(db); render(); toast('삭제했어요');
+  db.deleted.tx.push(id);
+  await persist(); render(); toast('삭제했어요');
 }
 
 /* ── 렌더 ── */
@@ -1151,7 +1359,8 @@ function renderPMList(out){
     inp.onchange=async()=>{
       const card=pmOf(inp.dataset.bd); if(!card)return;
       card.billDay=Math.min(Math.max(Number(inp.value)||1,1),28);
-      await store.set(db); render(); toast('이용기간을 바꿨어요');
+      card.ts=Date.now();
+      await persist(); render(); toast('이용기간을 바꿨어요');
     };
   });
 }
@@ -1183,7 +1392,8 @@ function renderBars(out){
   $('bars').querySelectorAll('input[data-b]').forEach(inp=>{
     inp.onchange=async()=>{
       db.budgets[inp.dataset.b]=Number(inp.value.replace(/[^\d]/g,''))||0;
-      await store.set(db); render(); toast('예산을 바꿨어요');
+      db.settingsTs=Date.now();
+      await persist(); render(); toast('예산을 바꿨어요');
     };
   });
   $('bars').querySelectorAll('input[data-cname]').forEach(inp=>{
@@ -1191,8 +1401,8 @@ function renderBars(out){
       const c=db.cats.find(x=>x.id===inp.dataset.cname); if(!c)return;
       const v=inp.value.trim();
       if(!v){inp.value=c.name;return}
-      c.name=v;
-      await store.set(db); renderCats(); render(); toast('이름을 바꿨어요');
+      c.name=v; c.ts=Date.now();
+      await persist(); renderCats(); render(); toast('이름을 바꿨어요');
     };
   });
   $('bars').querySelectorAll('[data-cdel]').forEach(b=>b.onclick=()=>delCat(b.dataset.cdel));
@@ -1202,8 +1412,8 @@ async function addCat(){
   const name=$('cat-name').value.trim();
   if(!name){$('cat-name').focus();return toast('이름을 적어주세요')}
   const budget=Number($('cat-budget').value.replace(/[^\d]/g,''))||0;
-  db.cats.push({id:'c'+Date.now().toString(36),name,budget});
-  await store.set(db);
+  db.cats.push({id:'c'+Date.now().toString(36),name,budget,ts:Date.now()});
+  await persist();
   $('cat-name').value=''; $('cat-budget').value=''; $('cat-new').classList.remove('on');
   renderCats(); render(); toast(`${name} 추가했어요`);
 }
@@ -1215,12 +1425,14 @@ async function delCat(id){
   const usedRec=db.recurring.filter(r=>r.c===id).length;
   const to=db.cats.find(x=>x.id!==id);
   if((used||usedRec)&&!confirm(`'${c.name}'에 ${used}건의 기록${usedRec?`과 고정지출 ${usedRec}건`:''}이 있습니다. 모두 '${to.name}'으로 옮기고 삭제할까요?`))return;
-  db.tx.forEach(t=>{if(t.c===id)t.c=to.id});
-  db.recurring.forEach(r=>{if(r.c===id)r.c=to.id});
+  db.tx.forEach(t=>{if(t.c===id){t.c=to.id;t.ts=Date.now();}});
+  db.recurring.forEach(r=>{if(r.c===id){r.c=to.id;r.ts=Date.now();}});
   db.cats=db.cats.filter(x=>x.id!==id);
   delete db.budgets[id];
+  db.deleted.cats.push(id);
+  db.settingsTs=Date.now();
   if(cat===id)cat=db.cats[0].id;
-  await store.set(db);
+  await persist();
   renderCats(); render(); toast('삭제했어요');
 }
 
@@ -1343,7 +1555,7 @@ function doImport(e){
       const ids=new Set(db.tx.map(t=>t.id));
       db.tx=db.tx.concat(d.tx.filter(t=>!ids.has(t.id)));
       db.budgets={...db.budgets,...(d.budgets||{})};
-      await store.set(db); render(); toast('불러왔어요');
+      await persist(); render(); toast('불러왔어요');
     }catch(err){toast('파일 형식이 맞지 않습니다')}
   };
   r.readAsText(f); e.target.value='';
