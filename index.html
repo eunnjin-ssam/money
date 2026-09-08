@@ -187,9 +187,12 @@ header{padding:20px 0 8px}
 .row-pm{font-size:11.5px;color:var(--ink-faint);margin-left:7px}
 
 .pm-billline{
-  display:flex;align-items:baseline;gap:5px;margin-top:5px;
-  font-size:11.5px;color:var(--ink-faint);
+  flex-basis:100%;width:100%;
+  display:flex;align-items:baseline;gap:6px;margin-top:8px;flex-wrap:wrap;
+  padding-left:16px;font-size:11.5px;color:var(--ink-faint);
 }
+.pm-billline .pm-bl-1{flex:0 0 auto;white-space:nowrap}
+.pm-billline .pm-bl-2{flex:1 1 auto;white-space:nowrap}
 .pm-billline b{color:var(--spend);font-weight:700}
 .pm-billline input{
   width:30px;border:0;border-bottom:1px solid var(--rule);background:transparent;
@@ -1406,7 +1409,7 @@ function render(){
   renderRecurring();
   renderLeaks(out,elapsed);
   renderBars(out);
-  renderPMList(out);
+  renderPMList(out,isThis);
   $('cnt').textContent=rows.length?`${rows.length}건`:'';
   renderList(rows);
   renderQuick();
@@ -1553,7 +1556,7 @@ function renderLeaks(out,elapsed){
   box.innerHTML=html;
 }
 
-function renderPMList(out){
+function renderPMList(out,isThis){
   const by={}, items={};
   out.forEach(t=>{
     const k=t.p||'none';
@@ -1569,12 +1572,13 @@ function renderPMList(out){
   let anyCredit=false;
   let html='<div class="pmlist">';
   html+=known.map(p=>{
-    const open=p.id!=='none'?cardOpenAmount(p):null;
+    // '다음 청구'는 실제 오늘 기준의 청구 예정액이므로, 현재 기간을 볼 때만 표시한다
+    const open=(isThis&&p.id!=='none')?cardOpenAmount(p):null;
     if(open)anyCredit=true;
     const billLine=open?`
       <div class="pm-billline">
-        이용기간 <input type="number" inputmode="numeric" min="1" max="28" data-bd="${p.id}" value="${p.billDay||1}">일 시작
-        (${fmtMD(open.start)}~${fmtMD(new Date(open.end-DAY))}) → 다음 청구 <b>${won(open.sum)}원</b>
+        <span class="pm-bl-1">이용기간 <input type="number" inputmode="numeric" min="1" max="28" data-bd="${p.id}" value="${p.billDay||1}">일 시작</span>
+        <span class="pm-bl-2">(${fmtMD(open.start)}~${fmtMD(new Date(open.end-DAY))}) → 다음 청구 <b>${won(open.sum)}원</b></span>
       </div>`:'';
     const cnt=p.n;
     const expanded=expandedPm===p.id;
@@ -1596,11 +1600,11 @@ function renderPMList(out){
       <div class="b">
         <div class="nm">${esc(p.name)}<em>${PMTYPE[p.type]||''}</em></div>
         <div class="cnt">${p.n?`${p.n}건 · 전체의 ${total?Math.round(p.sum/total*100):0}%`:'사용 없음'}</div>
-        ${billLine}
         ${cnt?`<button class="pm-expand" data-pmexp="${p.id}">${expanded?'▲ 접기':`▼ 내역 ${cnt}건`}</button>`:''}
       </div>
       <span class="am num">${won(p.sum)}원</span>
       ${p.id!=='none'?`<button class="rm" data-rmpm="${p.id}" aria-label="${esc(p.name)} 삭제">×</button>`:''}
+      ${billLine}
       ${detail}
     </div>`;
   }).join('');
