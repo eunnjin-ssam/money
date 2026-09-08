@@ -238,7 +238,7 @@ section{margin-top:26px}
 
 /* 카테고리 */
 .bars{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:16px}
-.bar + .bar{margin-top:15px}
+.bar + .bar{margin-top:15px;border-top:1px solid var(--rule);padding-top:15px}
 .bar-top{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px;margin-bottom:6px}
 .bar-top .l{font-weight:600}
 .bar-top .r{color:var(--ink-soft);font-size:13px}
@@ -247,13 +247,28 @@ section{margin-top:26px}
 .fill{height:100%;background:var(--ink);border-radius:99px;transition:width .35s ease}
 .fill.over{background:var(--spend)}
 .fill.near{background:var(--warn)}
-.bar-bud{font-size:11.5px;color:var(--ink-faint);margin-top:5px}
+.bar-bud{font-size:11.5px;color:var(--ink-faint);margin-top:7px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.bar-expand{
+  border:0;background:transparent;font-family:inherit;font-size:11.5px;font-weight:600;
+  color:var(--ink-soft);cursor:pointer;padding:0;flex:0 0 auto;
+}
+.bar-expand:disabled{color:var(--ink-faint);opacity:.6;cursor:default;font-weight:400}
+.bar-bud > span{flex:1;text-align:right;min-width:0}
 .bar-bud input{
   width:78px;border:0;border-bottom:1px solid var(--rule);background:transparent;
   font-family:inherit;font-size:11.5px;color:var(--ink-soft);text-align:right;outline:none;
   font-variant-numeric:tabular-nums;
 }
 .bar-bud input:focus{border-bottom-color:var(--ink);color:var(--ink)}
+.bar.open{padding-bottom:2px}
+.cat-detail{margin-top:11px;border-top:1px dashed var(--rule);padding-top:4px}
+.cd-row{display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer}
+.cd-row + .cd-row{border-top:1px dashed var(--rule)}
+.cd-row:active{background:#FAFBF9}
+.cd-d{flex:0 0 auto;font-size:11.5px;color:var(--ink-faint);width:34px}
+.cd-m{flex:1;font-size:13.5px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cd-a{flex:0 0 auto;font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.cd-empty{padding:10px 0;font-size:12.5px;color:var(--ink-faint);text-align:center}
 
 /* ── 고정지출 ── */
 .rec-new{display:none;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px;margin-bottom:12px}
@@ -302,6 +317,38 @@ section{margin-top:26px}
   border:1px solid var(--ink);background:transparent;border-radius:8px;padding:8px 13px;
   font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;flex:0 0 auto;
 }
+
+/* ── 탭 ── */
+.tabs{
+  display:flex;gap:4px;background:#E3E5DE;border-radius:11px;padding:4px;margin-top:14px;
+  position:sticky;top:0;z-index:20;
+}
+.tabs button{
+  flex:1;border:0;background:transparent;border-radius:8px;padding:9px 4px;
+  font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;
+}
+.tabs button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.panel{display:none}
+.panel.on{display:block}
+.panel > section:first-child,.panel > .entry{margin-top:18px}
+
+/* ── 주별 지출 그래프 ── */
+.wchart{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:18px 16px 14px}
+.wchart-bars{display:flex;align-items:flex-end;gap:8px;height:150px;padding-top:6px}
+.wcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:0;height:100%;justify-content:flex-end;min-width:0}
+.wcol .val{font-size:10.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums;margin-bottom:4px;white-space:nowrap;font-weight:600}
+.wcol .col{
+  width:100%;max-width:42px;background:var(--ink);border-radius:6px 6px 0 0;min-height:3px;
+  transition:height .35s ease;
+}
+.wcol.cur .col{background:var(--spend)}
+.wcol .lab{font-size:10.5px;color:var(--ink-faint);margin-top:7px;white-space:nowrap}
+.wchart-foot{
+  display:flex;justify-content:space-between;align-items:baseline;
+  border-top:1px dashed var(--rule);margin-top:13px;padding-top:11px;font-size:12.5px;color:var(--ink-soft);
+}
+.wchart-foot b{color:var(--ink);font-weight:700}
+.wchart-avg{position:relative}
 
 /* ── 카테고리 관리 ── */
 .cat-new{display:none;gap:8px;background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:12px;margin-bottom:12px}
@@ -395,15 +442,31 @@ section{margin-top:26px}
   font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;
 }
 .sync-connected{
-  display:none;background:var(--card);border:1px solid var(--rule);border-radius:14px;
-  padding:14px 16px;align-items:center;justify-content:space-between;gap:10px;
+  display:none;flex-direction:column;gap:11px;background:var(--card);border:1px solid var(--rule);
+  border-radius:14px;padding:14px 16px;
 }
 .sync-connected.on{display:flex}
+.sync-conn-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .sync-connected p{font-size:13.5px;color:var(--ink-soft)}
 .sync-connected b{color:var(--save);font-weight:700}
-.sync-connected button{
+.sync-connected #sync-disconnect{
   border:1px solid var(--rule);background:transparent;border-radius:8px;padding:8px 13px;
   font-family:inherit;font-size:13px;color:var(--ink-soft);cursor:pointer;flex:0 0 auto;
+}
+#sync-link-btn{
+  border:1px dashed var(--rule);background:transparent;border-radius:9px;padding:10px;
+  font-family:inherit;font-size:13px;color:var(--ink-soft);cursor:pointer;
+}
+.sync-link-box{display:none;flex-direction:column;gap:8px;border-top:1px dashed var(--rule);padding-top:11px}
+.sync-link-box.on{display:flex}
+.sync-link-box .sync-help{margin-bottom:0}
+.sync-link-box input{
+  width:100%;border:1px solid var(--rule);border-radius:9px;padding:9px 11px;
+  font-family:ui-monospace,monospace;font-size:11.5px;background:#FBFBF9;color:var(--ink-soft);
+}
+.sync-link-box button{
+  border:0;background:var(--tap);color:#fff;border-radius:9px;padding:10px;
+  font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
 }
 
 .tools{display:flex;gap:8px;margin-top:12px}
@@ -467,6 +530,14 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
   </div>
 </header>
 
+<nav class="tabs" id="tabs">
+  <button data-tab="input" aria-pressed="true">입력</button>
+  <button data-tab="stats" aria-pressed="false">분석</button>
+  <button data-tab="history" aria-pressed="false">내역</button>
+  <button data-tab="settings" aria-pressed="false">설정</button>
+</nav>
+
+<div class="panel on" data-panel="input">
 <div class="entry" id="entry">
   <div class="editbar" id="editbar">
     <span><b>수정 중</b> — 고친 뒤 저장하세요</span>
@@ -503,25 +574,15 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
   <button class="save-btn" id="add">기록하기</button>
   <div class="quick" id="quick"></div>
 </div>
+</div><!-- /input -->
 
+<div class="panel" data-panel="stats">
 <section>
   <div class="sec-head">
-    <h2>고정지출</h2>
-    <button id="rec-add">＋ 추가</button>
+    <h2>주별 지출</h2>
+    <p id="chart-cap"></p>
   </div>
-  <div class="rec-new" id="rec-new">
-    <input id="rec-name" type="text" placeholder="이름 (예: 관리비)" aria-label="고정지출 이름">
-    <div class="rec-2">
-      <input id="rec-amt" type="text" inputmode="numeric" placeholder="금액" aria-label="금액">
-      <input id="rec-day" type="number" inputmode="numeric" min="1" max="28" placeholder="매월 며칠" aria-label="매월 며칠">
-    </div>
-    <div class="rec-2">
-      <select id="rec-cat" aria-label="카테고리"></select>
-      <select id="rec-pm" aria-label="결제수단"></select>
-    </div>
-    <button id="rec-save">고정지출 추가</button>
-  </div>
-  <div id="reclist"></div>
+  <div id="weekchart"></div>
 </section>
 
 <section>
@@ -552,6 +613,28 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
   </div>
   <div id="pmlist"></div>
 </section>
+</div><!-- /stats -->
+
+<div class="panel" data-panel="history">
+<section>
+  <div class="sec-head">
+    <h2>고정지출</h2>
+    <button id="rec-add">＋ 추가</button>
+  </div>
+  <div class="rec-new" id="rec-new">
+    <input id="rec-name" type="text" placeholder="이름 (예: 관리비)" aria-label="고정지출 이름">
+    <div class="rec-2">
+      <input id="rec-amt" type="text" inputmode="numeric" placeholder="금액" aria-label="금액">
+      <input id="rec-day" type="number" inputmode="numeric" min="1" max="28" placeholder="매월 며칠" aria-label="매월 며칠">
+    </div>
+    <div class="rec-2">
+      <select id="rec-cat" aria-label="카테고리"></select>
+      <select id="rec-pm" aria-label="결제수단"></select>
+    </div>
+    <button id="rec-save">고정지출 추가</button>
+  </div>
+  <div id="reclist"></div>
+</section>
 
 <section>
   <div class="sec-head">
@@ -564,7 +647,9 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
   </div>
   <div id="list"></div>
 </section>
+</div><!-- /history -->
 
+<div class="panel" data-panel="settings">
 <section>
   <div class="sec-head">
     <h2>기기 간 동기화</h2>
@@ -583,8 +668,20 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
   </div>
 
   <div class="sync-connected" id="sync-connected">
-    <p>코드 <b id="sync-code-label"></b>로 동기화 중입니다.</p>
-    <button id="sync-disconnect">연결 해제</button>
+    <div class="sync-conn-top">
+      <p>코드 <b id="sync-code-label"></b>로 동기화 중입니다.</p>
+      <button id="sync-disconnect">연결 해제</button>
+    </div>
+    <button id="sync-link-btn">＋ 다른 기기용 연결 링크 만들기</button>
+    <div class="sync-link-box" id="sync-link-box">
+      <p class="sync-help">
+        이 링크를 다른 기기에서 열면 타이핑 없이 바로 연결됩니다.
+        접속 정보가 그대로 들어있으니 카카오톡 '나에게 보내기'나 문자처럼
+        <b>본인만 보는 곳으로</b> 전달하세요.
+      </p>
+      <input id="sync-link" type="text" readonly aria-label="연결 링크">
+      <button id="sync-link-copy">링크 복사</button>
+    </div>
   </div>
 </section>
 
@@ -594,6 +691,7 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
 </div>
 
 <footer>기록은 이 기기에 저장되며, 연결 시 등록한 Firebase에도 동기화됩니다</footer>
+</div><!-- /settings -->
 </div>
 
 <div class="toast" id="toast"></div>
@@ -704,7 +802,27 @@ function updateSyncUI(connected,connecting){
   $('sync-status').textContent=connecting?'연결하는 중…':(connected?'동기화 중':'연결 안 됨');
   $('sync-form').style.display=connected?'none':'block';
   $('sync-connected').classList.toggle('on',connected);
+  $('sync-link-box').classList.remove('on');
   if(connected&&syncCfg)$('sync-code-label').textContent=syncCfg.code;
+}
+
+function buildSyncLink(){
+  const payload=encodeURIComponent(JSON.stringify({config:syncCfg.config,code:syncCfg.code}));
+  return location.origin+location.pathname+'#sync='+payload;
+}
+
+// 페이지 주소에 #sync=... 가 붙어 있으면(공유받은 연결 링크로 열었으면) 타이핑 없이 자동 연결
+async function tryHashSync(){
+  const m=location.hash.match(/#sync=(.+)/);
+  if(!m)return false;
+  history.replaceState(null,'',location.pathname+location.search); // 주소창에 접속정보가 남지 않도록 제거
+  try{
+    const data=JSON.parse(decodeURIComponent(m[1]));
+    if(!data||!data.config||!data.code)return false;
+    if(!confirm(`이 링크로 동기화 코드 '${data.code}'에 연결할까요?`))return false;
+    await connectSync(data.config,data.code);
+    return true;
+  }catch(e){return false}
 }
 
 async function connectSync(cfgObj,code,silent){
@@ -770,7 +888,7 @@ const DEFAULT_PMS=[{id:'cash',name:'현금',type:'cash'}];
 let db={tx:[],budgets:{},cats:DEFAULT_CATS.map(c=>({...c})),pms:[...DEFAULT_PMS],recurring:[],
   deleted:{tx:[],cats:[],pms:[],recurring:[]},settingsTs:0,cycleStart:1,v2:true};
 let syncCfg={code:'',config:null,enabled:false};
-let mode='out', cat='food', pm='cash', editing=null, filterDate=null;
+let mode='out', cat='food', pm='cash', editing=null, filterDate=null, expandedCat=null;
 let cur=new Date();
 
 const $=id=>document.getElementById(id);
@@ -853,10 +971,13 @@ async function init(){
   $('cycle-start').value=db.cycleStart;
   renderCats(); renderPMs(); bindEvents(); render();
 
-  const savedSync=await store.get(SYNC_KEY);
-  if(savedSync&&savedSync.enabled&&savedSync.config&&savedSync.code){
-    syncCfg=savedSync;
-    connectSync(savedSync.config,savedSync.code,true);
+  const hashConnected=await tryHashSync();
+  if(!hashConnected){
+    const savedSync=await store.get(SYNC_KEY);
+    if(savedSync&&savedSync.enabled&&savedSync.config&&savedSync.code){
+      syncCfg=savedSync;
+      connectSync(savedSync.config,savedSync.code,true);
+    }
   }
 }
 
@@ -1034,6 +1155,10 @@ function renderCats(){
 }
 
 function bindEvents(){
+  $('tabs').querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{
+    switchTab(b.dataset.tab);
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
   $('amt').addEventListener('input',e=>{
     const raw=e.target.value.replace(/[^\d]/g,'');
     e.target.value=raw?Number(raw).toLocaleString('ko-KR'):'';
@@ -1098,6 +1223,21 @@ function bindEvents(){
   $('sync-disconnect').onclick=async()=>{
     if(confirm('연결을 해제할까요? 이 기기에 저장된 기록은 그대로 남습니다.'))await disconnectSync();
   };
+  $('sync-link-btn').onclick=()=>{
+    $('sync-link').value=buildSyncLink();
+    $('sync-link-box').classList.toggle('on');
+  };
+  $('sync-link-copy').onclick=async()=>{
+    const link=$('sync-link').value;
+    try{
+      await navigator.clipboard.writeText(link);
+      toast('링크를 복사했어요');
+    }catch(e){
+      $('sync-link').select();
+      document.execCommand('copy');
+      toast('링크를 복사했어요');
+    }
+  };
 }
 
 function setMode(m){
@@ -1120,9 +1260,15 @@ function updateSaveBtn(){
     : '기록하기';
 }
 
+function switchTab(name){
+  $('tabs').querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.tab===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.dataset.panel===name));
+}
+
 function startEdit(id){
   const t=db.tx.find(x=>x.id===id); if(!t)return;
   editing=id;
+  switchTab('input');
   setMode(t.t==='out'?'out':t.t);
   if(t.t==='out'){
     cat=t.c;
@@ -1236,6 +1382,7 @@ function render(){
   }
 
   renderFlow(incomeAmt,total,savedAmt);
+  renderWeekChart(out,start,end);
   renderRecurring();
   renderLeaks(out,elapsed);
   renderBars(out);
@@ -1249,6 +1396,52 @@ function render(){
 function norm(s){
   return s.toLowerCase().replace(/[\s\d,._-]/g,'').replace(/(점|지점|본점)$/,'');
 }
+function renderWeekChart(out,start,end){
+  const box=$('weekchart');
+  if(!out.length){
+    box.innerHTML=`<div class="empty"><b>아직 그래프가 없어요</b>지출을 기록하면 주별 합계를 막대그래프로 보여드립니다.</div>`;
+    $('chart-cap').textContent='';
+    return;
+  }
+  // 이 기간을 주 단위(월요일 시작)로 쪼개, 각 주의 지출 합계를 낸다
+  const buckets=[];
+  let ws=weekStart(start);
+  while(ws<end){
+    const we=new Date(ws.getTime()+7*DAY);
+    buckets.push({start:new Date(ws),end:we,sum:0});
+    ws=we;
+  }
+  out.forEach(t=>{
+    const dt=dstr2date(t.d);
+    const b=buckets.find(x=>dt>=x.start&&dt<x.end);
+    if(b)b.sum+=t.a;
+  });
+  const max=Math.max(...buckets.map(b=>b.sum),1);
+  const now=new Date();
+  const avg=Math.round(buckets.reduce((s,b)=>s+b.sum,0)/buckets.length);
+
+  const bars=buckets.map((b,i)=>{
+    const h=Math.round(b.sum/max*100);
+    const isCur=now>=b.start&&now<b.end;
+    const label=`${b.start.getMonth()+1}/${b.start.getDate()}`;
+    const short=b.sum>=10000?`${Math.round(b.sum/10000)}만`:(b.sum?won(b.sum):'');
+    return `<div class="wcol ${isCur?'cur':''}">
+      <span class="val">${short}</span>
+      <div class="col" style="height:${h}%"></div>
+      <span class="lab">${i+1}주<br>${label}</span>
+    </div>`;
+  }).join('');
+
+  box.innerHTML=`<div class="wchart">
+    <div class="wchart-bars">${bars}</div>
+    <div class="wchart-foot">
+      <span>주 평균 <b>${won(avg)}원</b></span>
+      <span>가장 많이 쓴 주 <b>${won(max)}원</b></span>
+    </div>
+  </div>`;
+  $('chart-cap').textContent=`${buckets.length}주`;
+}
+
 function renderFlow(income,spent,saved){
   const box=$('flow');
   if(!income&&!saved){box.className='flow';box.innerHTML='';return}
@@ -1366,15 +1559,32 @@ function renderPMList(out){
 }
 
 function renderBars(out){
-  const by={};
-  out.forEach(t=>by[t.c]=(by[t.c]||0)+t.a);
+  const by={}, items={};
+  out.forEach(t=>{
+    by[t.c]=(by[t.c]||0)+t.a;
+    (items[t.c]=items[t.c]||[]).push(t);
+  });
   $('bars').innerHTML=db.cats.map(c=>{
     const spent=by[c.id]||0;
     const bud=catBudget(c);
     const p=bud?Math.min(spent/bud*100,100):0;
     const cls=spent>bud?'over':(spent>bud*0.8?'near':'');
     const left=bud-spent;
-    return `<div class="bar">
+    const cnt=(items[c.id]||[]).length;
+    const open=expandedCat===c.id;
+    let detail='';
+    if(open){
+      const list=(items[c.id]||[]).slice().sort((a,b)=>b.d.localeCompare(a.d)||b.id.localeCompare(a.id));
+      detail=`<div class="cat-detail">`+(list.length?list.map(t=>{
+        const dt=dstr2date(t.d);
+        return `<div class="cd-row" data-edit="${t.id}" role="button" tabindex="0">
+          <span class="cd-d num">${dt.getMonth()+1}/${dt.getDate()}</span>
+          <span class="cd-m">${esc(t.m)}<span class="row-pm">${esc(pmName(t.p))}</span></span>
+          <span class="cd-a num">${won(t.a)}</span>
+        </div>`;
+      }).join(''):`<div class="cd-empty">이 기간엔 기록이 없어요</div>`)+`</div>`;
+    }
+    return `<div class="bar ${open?'open':''}">
       <div class="bar-top">
         <span class="l">
           <input type="text" data-cname="${c.id}" value="${esc(c.name)}" aria-label="카테고리 이름">
@@ -1384,9 +1594,13 @@ function renderBars(out){
       </div>
       <div class="track"><div class="fill ${cls}" style="width:${p}%"></div></div>
       <div class="bar-bud">
-        ${spent>bud?`${won(-left)}원 초과`:`${won(left)}원 남음`} ·
-        예산 <input type="text" inputmode="numeric" data-b="${c.id}" value="${won(bud)}">원
+        <button class="bar-expand" data-exp="${c.id}" ${cnt?'':'disabled'}>
+          ${cnt?`${open?'▲ 접기':`▼ 내역 ${cnt}건`}`:'내역 없음'}
+        </button>
+        <span>${spent>bud?`${won(-left)}원 초과`:`${won(left)}원 남음`} ·
+        예산 <input type="text" inputmode="numeric" data-b="${c.id}" value="${won(bud)}">원</span>
       </div>
+      ${detail}
     </div>`;
   }).join('');
   $('bars').querySelectorAll('input[data-b]').forEach(inp=>{
@@ -1406,6 +1620,14 @@ function renderBars(out){
     };
   });
   $('bars').querySelectorAll('[data-cdel]').forEach(b=>b.onclick=()=>delCat(b.dataset.cdel));
+  $('bars').querySelectorAll('[data-exp]').forEach(b=>b.onclick=()=>{
+    expandedCat=expandedCat===b.dataset.exp?null:b.dataset.exp;
+    render();
+  });
+  $('bars').querySelectorAll('.cd-row[data-edit]').forEach(r=>{
+    r.onclick=()=>startEdit(r.dataset.edit);
+    r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();startEdit(r.dataset.edit)}};
+  });
 }
 
 async function addCat(){
