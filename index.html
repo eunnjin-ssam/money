@@ -165,7 +165,12 @@ header{padding:20px 0 8px}
 }
 
 .pmlist{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:4px 16px}
-.pmrow{display:flex;align-items:center;gap:10px;padding:13px 0}
+.pmrow{display:flex;align-items:center;gap:10px;padding:13px 0;flex-wrap:wrap}
+.pm-expand{
+  border:0;background:transparent;font-family:inherit;font-size:11.5px;font-weight:600;
+  color:var(--ink-soft);cursor:pointer;padding:4px 0 0;margin-top:2px;
+}
+.pmrow .cat-detail{flex-basis:100%;width:100%}
 .pmrow + .pmrow{border-top:1px dashed var(--rule)}
 .pmrow .b{flex:1;min-width:0}
 .pmrow .nm{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -902,7 +907,7 @@ const DEFAULT_PMS=[{id:'cash',name:'현금',type:'cash'}];
 let db={tx:[],budgets:{},cats:DEFAULT_CATS.map(c=>({...c})),pms:[...DEFAULT_PMS],recurring:[],
   deleted:{tx:[],cats:[],pms:[],recurring:[]},settingsTs:0,cycleStart:1,v2:true};
 let syncCfg={code:'',config:null,enabled:false};
-let mode='out', cat='food', pm='cash', editing=null, filterDate=null, expandedCat=null;
+let mode='out', cat='food', pm='cash', editing=null, filterDate=null, expandedCat=null, expandedPm=null;
 let cur=new Date();
 
 const $=id=>document.getElementById(id);
@@ -1549,11 +1554,12 @@ function renderLeaks(out,elapsed){
 }
 
 function renderPMList(out){
-  const by={};
+  const by={}, items={};
   out.forEach(t=>{
     const k=t.p||'none';
     (by[k]=by[k]||{n:0,sum:0}).n++;
     by[k].sum+=t.a;
+    (items[k]=items[k]||[]).push(t);
   });
   const known=db.pms.map(p=>({...p,...(by[p.id]||{n:0,sum:0})}));
   if(by.none)known.push({id:'none',name:'미지정',type:'',...by.none});
@@ -1570,16 +1576,32 @@ function renderPMList(out){
         이용기간 <input type="number" inputmode="numeric" min="1" max="28" data-bd="${p.id}" value="${p.billDay||1}">일 시작
         (${fmtMD(open.start)}~${fmtMD(new Date(open.end-DAY))}) → 다음 청구 <b>${won(open.sum)}원</b>
       </div>`:'';
+    const cnt=p.n;
+    const expanded=expandedPm===p.id;
+    let detail='';
+    if(expanded){
+      const list=(items[p.id]||[]).slice().sort((a,b)=>b.d.localeCompare(a.d)||b.id.localeCompare(a.id));
+      detail=`<div class="cat-detail">`+(list.length?list.map(t=>{
+        const dt=dstr2date(t.d);
+        return `<div class="cd-row" data-edit="${t.id}" role="button" tabindex="0">
+          <span class="cd-d num">${dt.getMonth()+1}/${dt.getDate()}</span>
+          <span class="cd-m">${esc(t.m)}<span class="row-pm">${catName(t.c)}</span></span>
+          <span class="cd-a num">${won(t.a)}</span>
+        </div>`;
+      }).join(''):`<div class="cd-empty">이 기간엔 기록이 없어요</div>`)+`</div>`;
+    }
     return `
-    <div class="pmrow">
+    <div class="pmrow ${expanded?'open':''}">
       <span class="dot ${p.type}"></span>
       <div class="b">
         <div class="nm">${esc(p.name)}<em>${PMTYPE[p.type]||''}</em></div>
         <div class="cnt">${p.n?`${p.n}건 · 전체의 ${total?Math.round(p.sum/total*100):0}%`:'사용 없음'}</div>
         ${billLine}
+        ${cnt?`<button class="pm-expand" data-pmexp="${p.id}">${expanded?'▲ 접기':`▼ 내역 ${cnt}건`}</button>`:''}
       </div>
       <span class="am num">${won(p.sum)}원</span>
       ${p.id!=='none'?`<button class="rm" data-rmpm="${p.id}" aria-label="${esc(p.name)} 삭제">×</button>`:''}
+      ${detail}
     </div>`;
   }).join('');
   if(anyCredit){
@@ -1591,6 +1613,14 @@ function renderPMList(out){
   html+='</div>';
   $('pmlist').innerHTML=html;
   $('pmlist').querySelectorAll('[data-rmpm]').forEach(b=>b.onclick=()=>delPM(b.dataset.rmpm));
+  $('pmlist').querySelectorAll('[data-pmexp]').forEach(b=>b.onclick=()=>{
+    expandedPm=expandedPm===b.dataset.pmexp?null:b.dataset.pmexp;
+    render();
+  });
+  $('pmlist').querySelectorAll('.cd-row[data-edit]').forEach(r=>{
+    r.onclick=()=>startEdit(r.dataset.edit);
+    r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();startEdit(r.dataset.edit)}};
+  });
   $('pmlist').querySelectorAll('[data-bd]').forEach(inp=>{
     inp.onclick=e=>e.stopPropagation();
     inp.onchange=async()=>{
