@@ -185,6 +185,10 @@ header{padding:20px 0 8px}
 }
 .credit-note b{color:var(--ink);font-weight:700}
 .row-pm{font-size:11.5px;color:var(--ink-faint);margin-left:7px}
+.auto-badge{
+  display:inline-block;font-size:10px;font-weight:700;color:var(--save);
+  background:#E6F0EA;border-radius:5px;padding:1px 5px;margin-right:5px;vertical-align:middle;
+}
 
 .pm-billline{
   flex-basis:100%;width:100%;
@@ -743,15 +747,15 @@ const store={
    각 항목(tx/cats/pms/recurring)은 id 기준으로 합치고, 같은 id가 양쪽에 있으면
    ts(마지막 수정 시각)가 더 큰 쪽을 채택한다. 삭제는 tombstone(deleted 목록)으로 남겨서
    병합 시 되살아나지 않게 막는다. budgets·cycleStart는 settingsTs로 묶어서 통째로 비교. */
-let fbMod=null, fsApp=null, fsDb=null, fsUnsub=null, fsDocRef=null, pushTimer=null, firstSnapshotDone=false;
+let fbMod=null, fsApp=null, fsDb=null, fsUnsub=null, fsDocRef=null, pushTimer=null, firstSnapshotDone=false, inboxUnsub=null;
 
 async function loadFirebaseSDK(){
   if(fbMod)return fbMod;
-  const [{initializeApp},{getFirestore,doc,onSnapshot,setDoc}]=await Promise.all([
+  const [{initializeApp},{getFirestore,doc,onSnapshot,setDoc,collection,deleteDoc}]=await Promise.all([
     import('https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js'),
     import('https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js')
   ]);
-  fbMod={initializeApp,getFirestore,doc,onSnapshot,setDoc};
+  fbMod={initializeApp,getFirestore,doc,onSnapshot,setDoc,collection,deleteDoc};
   return fbMod;
 }
 
@@ -874,6 +878,7 @@ async function connectSync(cfgObj,code,silent){
     });
     syncCfg={code,config:cfgObj,enabled:true};
     await store.set(syncCfg,SYNC_KEY);
+    watchInbox(code);
     updateSyncUI(true);
     if(!silent)toast('동기화를 연결했어요');
   }catch(e){
@@ -885,11 +890,48 @@ async function connectSync(cfgObj,code,silent){
 
 async function disconnectSync(){
   if(fsUnsub)fsUnsub();
-  fsUnsub=null; fsDocRef=null; fsApp=null; fsDb=null;
+  if(inboxUnsub)inboxUnsub();
+  fsUnsub=null; inboxUnsub=null; fsDocRef=null; fsApp=null; fsDb=null;
   syncCfg={code:'',config:null,enabled:false};
   await store.set(syncCfg,SYNC_KEY);
   updateSyncUI(false);
   toast('연결을 해제했어요');
+}
+
+// MacroDroid가 카드 알림을 이 컬렉션에 한 건씩 문서로 넣으면(append-only),
+// 앱이 그걸 감지해 db.tx로 옮기고 원본은 삭제한다. 배열 조작이 필요 없어 MacroDroid가 쓰기 쉽다.
+function watchInbox(code){
+  if(inboxUnsub)inboxUnsub();
+  const col=fbMod.collection(fsDb,'gagyebu_inbox',code,'items');
+  inboxUnsub=fbMod.onSnapshot(col,snap=>{
+    let added=0;
+    snap.forEach(d=>{
+      const raw=d.data()||{};
+      const amt=Number(String(raw.amount??raw.a??'').replace(/[^\d]/g,''));
+      if(!amt)return; // 금액 없으면 건너뜀
+      const merchant=(raw.merchant||raw.m||'자동등록').toString().slice(0,40);
+      // 카드 이름 매칭: 알림에 찍힌 카드명(raw.card)을 등록된 결제수단과 대조
+      let pmId='none';
+      if(raw.card){
+        const hit=db.pms.find(p=>raw.card.includes(p.name)||p.name.includes(raw.card));
+        if(hit)pmId=hit.id;
+      }
+      // 날짜: raw.date(YYYY-MM-DD)가 있으면 쓰고 없으면 오늘
+      const d8=/^\d{4}-\d{2}-\d{2}$/.test(raw.date||'')?raw.date:ymd(new Date());
+      const txId='auto-'+d.id;
+      // 이미 들여온 항목이면(같은 id) 중복 방지
+      if(!db.tx.some(t=>t.id===txId)&&!db.deleted.tx.includes(txId)){
+        db.tx.push({id:txId,d:d8,a:amt,t:'out',c:db.cats[0].id,p:pmId,m:merchant,ts:Date.now(),auto:true});
+        added++;
+      }
+      // 원본 인박스 문서는 삭제 (처리 완료)
+      fbMod.deleteDoc(fbMod.doc(fsDb,'gagyebu_inbox',code,'items',d.id)).catch(()=>{});
+    });
+    if(added){
+      persist(); render();
+      toast(`자동 등록 ${added}건이 들어왔어요`);
+    }
+  },err=>console.error('inbox watch',err));
 }
 
 const DEFAULT_CATS=[
@@ -1739,7 +1781,7 @@ async function delCat(id){
 function txRow(t){
   return `<div class="row" data-edit="${t.id}" role="button" tabindex="0">
     <span class="row-c">${t.t==='save'?'저축':t.t==='in'?'수입':catName(t.c)}</span>
-    <span class="row-m">${esc(t.m)}${t.t==='out'?`<span class="row-pm">${esc(pmName(t.p))}</span>`:''}</span>
+    <span class="row-m">${t.auto?'<span class="auto-badge">자동</span>':''}${esc(t.m)}${t.t==='out'?`<span class="row-pm">${esc(pmName(t.p))}</span>`:''}</span>
     <span class="row-a num ${t.t==='in'?'plus':'minus'}">${t.t==='in'?'+':'−'}${won(t.a)}</span>
     <button class="row-x" data-del="${t.id}" aria-label="삭제">×</button>
   </div>`;
