@@ -668,6 +668,9 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
     <p id="cnt"></p>
   </div>
   <div class="listbar">
+    <input id="filter-text" type="text" inputmode="search" placeholder="내용·금액 검색 (예: 스타벅스)" aria-label="내용으로 검색">
+  </div>
+  <div class="listbar">
     <input id="filter-date" type="date" aria-label="날짜로 찾기">
     <button id="filter-clear">전체 보기</button>
   </div>
@@ -952,7 +955,7 @@ const DEFAULT_PMS=[{id:'cash',name:'현금',type:'cash'}];
 let db={tx:[],budgets:{},cats:DEFAULT_CATS.map(c=>({...c})),pms:[...DEFAULT_PMS],recurring:[],
   deleted:{tx:[],cats:[],pms:[],recurring:[]},settingsTs:0,cycleStart:1,v2:true};
 let syncCfg={code:'',config:null,enabled:false};
-let mode='out', cat='food', pm='cash', editing=null, filterDate=null, expandedCat=null, expandedPm=null;
+let mode='out', cat='food', pm='cash', editing=null, filterDate=null, filterText='', expandedCat=null, expandedPm=null;
 let cur=new Date();
 
 const $=id=>document.getElementById(id);
@@ -1272,8 +1275,14 @@ function bindEvents(){
     filterDate=$('filter-date').value||null;
     render();
   });
+  $('filter-text').addEventListener('input',()=>{
+    filterText=$('filter-text').value.trim();
+    render();
+  });
   $('filter-clear').onclick=()=>{
-    filterDate=null; $('filter-date').value=''; render();
+    filterDate=null; filterText='';
+    $('filter-date').value=''; $('filter-text').value='';
+    render();
   };
   $('import').onclick=()=>$('file').click();
   $('file').onchange=doImport;
@@ -1809,6 +1818,33 @@ function bindListRows(){
 }
 
 function renderList(rows){
+  // 내용·금액 검색: 기간과 상관없이 전체 기록에서 찾음
+  if(filterText){
+    const q=filterText.toLowerCase();
+    const qNum=filterText.replace(/[^\d]/g,'');
+    const hits=db.tx.filter(t=>{
+      if(t.m&&t.m.toLowerCase().includes(q))return true;
+      if(catName(t.c)&&catName(t.c).toLowerCase().includes(q))return true;
+      if(pmName(t.p)&&pmName(t.p).toLowerCase().includes(q))return true;
+      if(qNum&&String(t.a).includes(qNum))return true;
+      return false;
+    }).sort((a,b)=>b.d.localeCompare(a.d)||b.id.localeCompare(a.id));
+    if(!hits.length){
+      $('list').innerHTML=`<div class="empty"><b>"${esc(filterText)}"</b>검색 결과가 없습니다.</div>`;
+      $('cnt').textContent='';
+      return;
+    }
+    const sum=hits.filter(t=>t.t==='out').reduce((s,t)=>s+t.a,0);
+    // 검색 결과는 날짜별로 묶어서 보여줌
+    const days={};
+    hits.forEach(t=>(days[t.d]=days[t.d]||[]).push(t));
+    $('list').innerHTML=`<div class="filter-note">"${esc(filterText)}" · ${hits.length}건${sum?` · 지출 합계 ${won(sum)}원`:''}</div>`
+      +Object.keys(days).sort().reverse().map(d=>dayBlock(d,days[d])).join('');
+    $('cnt').textContent=`${hits.length}건`;
+    bindListRows();
+    return;
+  }
+
   // 날짜로 찾기: 기간과 상관없이 전체 기록에서 해당 날짜만
   if(filterDate){
     const hits=db.tx.filter(t=>t.d===filterDate).sort((a,b)=>b.id.localeCompare(a.id));
