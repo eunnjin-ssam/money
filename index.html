@@ -294,6 +294,7 @@ section{margin-top:26px}
 .cd-m{flex:1;font-size:13.5px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cd-a{flex:0 0 auto;font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums}
 .cd-empty{padding:10px 0;font-size:12.5px;color:var(--ink-faint);text-align:center}
+.cd-hdr{padding:2px 0 8px;font-size:11.5px;color:var(--ink-faint);font-weight:600}
 
 /* ── 고정지출 ── */
 .rec-new{display:none;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px;margin-bottom:12px}
@@ -644,6 +645,23 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
 <div class="panel" data-panel="history">
 <section>
   <div class="sec-head">
+    <h2>내역</h2>
+    <p id="cnt"></p>
+  </div>
+  <div class="listbar">
+    <input id="filter-text" type="text" inputmode="search" placeholder="내용·금액 검색 (예: 스타벅스)" aria-label="내용으로 검색">
+  </div>
+  <div class="listbar">
+    <input id="filter-date" type="date" aria-label="날짜로 찾기">
+    <button id="filter-clear">전체 보기</button>
+  </div>
+  <div id="list"></div>
+</section>
+</div><!-- /history -->
+
+<div class="panel" data-panel="settings">
+<section>
+  <div class="sec-head">
     <h2>고정지출</h2>
     <button id="rec-add">＋ 추가</button>
   </div>
@@ -662,23 +680,6 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
   <div id="reclist"></div>
 </section>
 
-<section>
-  <div class="sec-head">
-    <h2>내역</h2>
-    <p id="cnt"></p>
-  </div>
-  <div class="listbar">
-    <input id="filter-text" type="text" inputmode="search" placeholder="내용·금액 검색 (예: 스타벅스)" aria-label="내용으로 검색">
-  </div>
-  <div class="listbar">
-    <input id="filter-date" type="date" aria-label="날짜로 찾기">
-    <button id="filter-clear">전체 보기</button>
-  </div>
-  <div id="list"></div>
-</section>
-</div><!-- /history -->
-
-<div class="panel" data-panel="settings">
 <section>
   <div class="sec-head">
     <h2>기기 간 동기화</h2>
@@ -1631,12 +1632,18 @@ function renderPMList(out,isThis){
         <span class="pm-bl-1">이용기간 <input type="number" inputmode="numeric" min="1" max="28" data-bd="${p.id}" value="${p.billDay||1}">일 시작</span>
         <span class="pm-bl-2">(${fmtMD(open.start)}~${fmtMD(new Date(open.end-DAY))}) → 다음 청구 <b>${won(open.sum)}원</b></span>
       </div>`:'';
-    const cnt=p.n;
+    // 신용카드는 '이용기간(청구주기)' 전체 내역을, 그 외엔 보고 있는 기간 내역을 펼친다
+    const billWin=open?cardPeriod(p.billDay):null;
+    const detailItems=billWin
+      ? db.tx.filter(t=>t.t==='out'&&t.p===p.id&&dstr2date(t.d)>=billWin.start&&dstr2date(t.d)<billWin.end)
+      : (items[p.id]||[]);
+    const cnt=detailItems.length;
     const expanded=expandedPm===p.id;
     let detail='';
     if(expanded){
-      const list=(items[p.id]||[]).slice().sort((a,b)=>b.d.localeCompare(a.d)||b.id.localeCompare(a.id));
-      detail=`<div class="cat-detail">`+(list.length?list.map(t=>{
+      const list=detailItems.slice().sort((a,b)=>b.d.localeCompare(a.d)||b.id.localeCompare(a.id));
+      const hdr=billWin?`<div class="cd-hdr">이용기간 ${fmtMD(billWin.start)}~${fmtMD(new Date(billWin.end-DAY))} · ${list.length}건</div>`:'';
+      detail=`<div class="cat-detail">`+hdr+(list.length?list.map(t=>{
         const dt=dstr2date(t.d);
         return `<div class="cd-row" data-edit="${t.id}" role="button" tabindex="0">
           <span class="cd-d num">${dt.getMonth()+1}/${dt.getDate()}</span>
@@ -1645,13 +1652,15 @@ function renderPMList(out,isThis){
         </div>`;
       }).join(''):`<div class="cd-empty">이 기간엔 기록이 없어요</div>`)+`</div>`;
     }
+    // 펼치기 버튼 라벨: 신용카드면 청구주기 건수, 아니면 보는 기간 건수
+    const expandLabel=billWin?`▼ 청구내역 ${cnt}건`:`▼ 내역 ${cnt}건`;
     return `
     <div class="pmrow ${expanded?'open':''}">
       <span class="dot ${p.type}"></span>
       <div class="b">
         <div class="nm">${esc(p.name)}<em>${PMTYPE[p.type]||''}</em></div>
         <div class="cnt">${p.n?`${p.n}건 · 전체의 ${total?Math.round(p.sum/total*100):0}%`:'사용 없음'}</div>
-        ${cnt?`<button class="pm-expand" data-pmexp="${p.id}">${expanded?'▲ 접기':`▼ 내역 ${cnt}건`}</button>`:''}
+        ${cnt?`<button class="pm-expand" data-pmexp="${p.id}">${expanded?'▲ 접기':expandLabel}</button>`:''}
       </div>
       <span class="am num">${won(p.sum)}원</span>
       ${p.id!=='none'?`<button class="rm" data-rmpm="${p.id}" aria-label="${esc(p.name)} 삭제">×</button>`:''}
