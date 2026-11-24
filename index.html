@@ -495,6 +495,59 @@ section{margin-top:26px}
   font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
 }
 
+
+/* ── 문자 붙여넣기 / 자동 등록 ── */
+.paste{margin-top:12px}
+.paste-toggle{
+  width:100%;border:1px dashed var(--ink-faint);background:transparent;border-radius:12px;padding:12px;
+  font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);cursor:pointer;
+}
+.paste-toggle small{display:block;font-weight:400;font-size:11.5px;color:var(--ink-faint);margin-top:2px}
+.paste-box{display:none;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px;margin-top:8px}
+.paste-box.on{display:block}
+.paste-box textarea{
+  width:100%;border:1px solid var(--rule);border-radius:9px;padding:10px 12px;resize:vertical;
+  font-family:inherit;font-size:13px;line-height:1.5;background:#FBFBF9;color:var(--ink);outline:none;
+}
+.paste-box textarea:focus{border-color:var(--ink)}
+.paste-actions{display:flex;gap:8px;margin:8px 0 10px}
+.paste-actions button{
+  flex:1;border:1px solid var(--rule);background:transparent;border-radius:9px;padding:9px;
+  font-family:inherit;font-size:13px;color:var(--ink-soft);cursor:pointer;
+}
+.paste-none{font-size:12.5px;color:var(--ink-faint);padding:4px 2px}
+.prow{display:flex;align-items:center;gap:8px;padding:10px 0;cursor:pointer}
+.prow + .prow{border-top:1px dashed var(--rule)}
+.prow.dup{opacity:.55}
+.prow input[type=checkbox]{flex:0 0 auto;width:17px;height:17px;accent-color:var(--ink)}
+.prow .row-c{width:34px}
+.prow .row-m{font-size:13.5px;display:flex;flex-direction:column;white-space:normal}
+.prow .row-pm{margin-left:0}
+.prow select{
+  flex:0 0 auto;max-width:76px;border:1px solid var(--rule);border-radius:7px;padding:4px 4px;
+  font-family:inherit;font-size:12px;background:#FBFBF9;color:var(--ink-soft);
+}
+.prow .row-a{font-size:13.5px}
+.auto-badge.cancel{background:#F3EDEB;color:var(--spend)}
+#paste-save{display:none}
+#paste-save:disabled{opacity:.4}
+.auto-card{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px}
+.auto-card label.k{display:block;font-size:11.5px;color:var(--ink-faint);margin:2px 0 5px}
+.auto-card .copyrow{display:flex;gap:6px;margin-bottom:10px}
+.auto-card .copyrow input{
+  flex:1;min-width:0;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;
+  font-family:ui-monospace,monospace;font-size:11px;background:#FBFBF9;color:var(--ink-soft);
+}
+.auto-card .copyrow button{
+  flex:0 0 auto;border:0;background:var(--tap);color:#fff;border-radius:8px;padding:8px 12px;
+  font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+}
+.auto-card details{border-top:1px dashed var(--rule);padding:10px 0 2px}
+.auto-card summary{font-size:13.5px;font-weight:700;cursor:pointer;list-style-position:inside}
+.auto-card ol{margin:8px 0 4px 18px;font-size:12.5px;color:var(--ink-soft);line-height:1.7}
+.auto-card ol b{color:var(--ink)}
+.auto-card code{font-family:ui-monospace,monospace;font-size:11.5px;background:#F3F5F1;padding:1px 4px;border-radius:4px;word-break:break-all}
+
 .tools{display:flex;gap:8px;margin-top:12px}
 .tools button{
   flex:1;border:1px solid var(--rule);background:transparent;border-radius:10px;
@@ -600,6 +653,18 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
   </div>
   <button class="save-btn" id="add">기록하기</button>
   <div class="quick" id="quick"></div>
+</div>
+<div class="paste">
+  <button class="paste-toggle" id="paste-toggle">카드 문자 붙여넣어 한 번에 등록<small>승인 문자·알림을 복사해 넣으면 금액·가게·카드를 알아서 채워요</small></button>
+  <div class="paste-box" id="paste-box">
+    <textarea id="paste-text" rows="5" placeholder="예) 신한카드(1234)승인 홍*동 12,500원(일시불)11/24 13:05 스타벅스&#10;&#10;여러 건을 한꺼번에 붙여넣어도 돼요" aria-label="카드 승인 문자"></textarea>
+    <div class="paste-actions">
+      <button id="paste-clip">붙여넣기</button>
+      <button id="paste-clear">지우기</button>
+    </div>
+    <div id="paste-preview"></div>
+    <button class="save-btn" id="paste-save">등록하기</button>
+  </div>
 </div>
 </div><!-- /input -->
 
@@ -712,6 +777,56 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
       <input id="sync-link" type="text" readonly aria-label="연결 링크">
       <button id="sync-link-copy">링크 복사</button>
     </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <h2>카드 문자 자동 등록</h2>
+    <p>결제하면 저절로 기록</p>
+  </div>
+  <div class="auto-card" id="auto-off">
+    <p class="sync-help" style="margin-bottom:0">
+      먼저 위의 <b>기기 간 동기화</b>를 연결해 주세요. 연결하면 폰이 카드 승인 문자(또는 알림)를 받을 때마다
+      가계부로 보내도록 설정하는 방법이 여기 나와요.
+    </p>
+  </div>
+  <div class="auto-card" id="auto-on" style="display:none">
+    <p class="sync-help">
+      폰이 카드 승인 문자를 아래 주소로 보내면, 가계부가 금액·가게·카드를 읽어서 <b>자동</b> 표시로 등록해요.
+      카테고리는 같은 가게를 전에 넣었던 곳으로 알아서 고르고, 취소 문자가 오면 해당 기록을 지워요.
+    </p>
+    <label class="k">보낼 주소 (POST)</label>
+    <div class="copyrow"><input id="auto-url" type="text" readonly aria-label="보낼 주소"><button id="auto-url-copy">복사</button></div>
+    <label class="k">보낼 내용 (JSON)</label>
+    <div class="copyrow"><input id="auto-body" type="text" readonly value='{"fields":{"text":{"stringValue":"여기에 문자 내용"}}}' aria-label="보낼 내용"><button id="auto-body-copy">복사</button></div>
+
+    <details>
+      <summary>아이폰 — 단축어 앱</summary>
+      <ol>
+        <li><b>단축어</b> 앱 → 아래 <b>자동화</b> → <b>＋</b> → <b>메시지</b></li>
+        <li>‘메시지 내용’에 <b>승인</b> 입력 (발신자는 비워두거나 카드사 번호 선택) → <b>즉시 실행</b> 선택 → 다음</li>
+        <li><b>새로운 빈 자동화</b> → 동작 추가에서 <b>URL 콘텐츠 가져오기</b></li>
+        <li>URL 자리에 위의 <b>보낼 주소</b> 붙여넣기</li>
+        <li>펼치기(›) → 방법 <b>POST</b>, 요청 본문 <b>JSON</b></li>
+        <li>필드 추가 → <b>사전</b>, 키 <code>fields</code> → 그 안에 다시 <b>사전</b>, 키 <code>text</code> → 그 안에 <b>텍스트</b>, 키 <code>stringValue</code>, 값은 변수 <b>단축어 입력</b>(메시지 내용)</li>
+        <li>완료. 이제 카드 승인 문자가 오면 몇 초 안에 가계부에 들어와요.</li>
+      </ol>
+      <p class="sync-help" style="margin:6px 0 0">아이폰은 카드사 <b>앱 알림</b>은 읽을 수 없어서 <b>문자</b>만 됩니다. 카드사 앱에서 ‘결제 알림’을 문자(SMS)로 받도록 바꿔주세요. 문자를 안 받는 카드는 알림을 길게 눌러 복사 → 입력 탭의 <b>붙여넣어 등록</b>을 쓰면 돼요.</p>
+    </details>
+
+    <details>
+      <summary>안드로이드 — MacroDroid 앱</summary>
+      <ol>
+        <li>Play 스토어에서 <b>MacroDroid</b> 설치 → <b>매크로 추가</b></li>
+        <li>트리거: <b>알림 → 알림 수신</b> → 카드사 앱 선택 (문자로 받는 카드면 <b>SMS 수신</b>, 내용에 <code>승인</code> 포함)</li>
+        <li>동작: <b>웹 상호작용 → HTTP 요청</b>, 방법 <b>POST</b>, URL에 위의 <b>보낼 주소</b></li>
+        <li>콘텐츠 유형 <code>application/json</code>, 본문에 위의 <b>보낼 내용</b>을 붙여넣고 <code>여기에 문자 내용</code> 부분을 매직 텍스트로 바꾸기: 알림이면 <code>[not_title] [notification]</code>, 문자면 <code>[sms_message]</code></li>
+        <li>저장. 카드 결제 알림이 오면 바로 가계부에 들어와요.</li>
+      </ol>
+      <p class="sync-help" style="margin:6px 0 0">줄바꿈이 섞인 문자에서 전송이 실패하면, HTTP 요청 앞에 <b>텍스트 조작</b> 동작을 넣어 줄바꿈을 공백으로 바꿔주세요.</p>
+    </details>
+    <p class="sync-help" style="margin:10px 0 0">들어오지 않으면 Firebase 콘솔 → Firestore → <b>규칙</b>에서 <code>gagyebu_inbox</code> 쓰기가 허용돼 있는지 확인하세요. 이 주소에는 접속 정보가 들어 있으니 다른 사람에게 보내지 마세요.</p>
   </div>
 </section>
 
@@ -834,6 +949,7 @@ function updateSyncUI(connected,connecting){
   $('sync-connected').classList.toggle('on',connected);
   $('sync-link-box').classList.remove('on');
   if(connected&&syncCfg)$('sync-code-label').textContent=syncCfg.code;
+  renderAutoGuide(connected&&!!syncCfg&&!!syncCfg.config);
 }
 
 function buildSyncLink(){
@@ -902,40 +1018,246 @@ async function disconnectSync(){
   toast('연결을 해제했어요');
 }
 
-// MacroDroid가 카드 알림을 이 컬렉션에 한 건씩 문서로 넣으면(append-only),
-// 앱이 그걸 감지해 db.tx로 옮기고 원본은 삭제한다. 배열 조작이 필요 없어 MacroDroid가 쓰기 쉽다.
+// 단축어(아이폰)·MacroDroid(안드로이드)가 카드 문자를 이 컬렉션에 한 건씩 문서로 넣으면(append-only),
+// 앱이 그걸 감지해 해석 → db.tx로 옮기고 원본은 삭제한다. {text:"문자 원문"} 하나만 보내면 된다.
 function watchInbox(code){
   if(inboxUnsub)inboxUnsub();
   const col=fbMod.collection(fsDb,'gagyebu_inbox',code,'items');
   inboxUnsub=fbMod.onSnapshot(col,snap=>{
-    let added=0;
+    let added=0,canceled=0;
     snap.forEach(d=>{
       const raw=d.data()||{};
-      const amt=Number(String(raw.amount??raw.a??'').replace(/[^\d]/g,''));
-      if(!amt)return; // 금액 없으면 건너뜀
-      const merchant=(raw.merchant||raw.m||'자동등록').toString().slice(0,40);
-      // 카드 이름 매칭: 알림에 찍힌 카드명(raw.card)을 등록된 결제수단과 대조
-      let pmId='none';
-      if(raw.card){
-        const hit=db.pms.find(p=>raw.card.includes(p.name)||p.name.includes(raw.card));
-        if(hit)pmId=hit.id;
+      let item=null;
+      const text=raw.text??raw.sms??raw.body;
+      if(text){
+        // 문자/알림 원문을 그대로 보낸 경우: 앱이 직접 해석
+        item=parseCardMsg(String(text));
+      }else{
+        // 예전 방식: 금액·가게·카드를 나눠서 보낸 경우
+        const amt=Number(String(raw.amount??raw.a??'').replace(/[^\d]/g,''));
+        if(amt){
+          const card=String(raw.card||'');
+          item={amount:amt,merchant:String(raw.merchant||raw.m||'').slice(0,40),
+            date:/^\d{4}-\d{2}-\d{2}$/.test(raw.date||'')?raw.date:null,
+            co:(card.match(CO_RE)||[])[1]||'',last4:(card.match(/\d{4}/)||[''])[0],
+            isCheck:/체크/.test(card),cancel:!!raw.cancel};
+          const hit=card&&db.pms.find(p=>card.includes(p.name)||p.name.includes(card));
+          if(hit)item.pmHit=hit.id;
+        }
       }
-      // 날짜: raw.date(YYYY-MM-DD)가 있으면 쓰고 없으면 오늘
-      const d8=/^\d{4}-\d{2}-\d{2}$/.test(raw.date||'')?raw.date:ymd(new Date());
-      const txId='auto-'+d.id;
-      // 이미 들여온 항목이면(같은 id) 중복 방지
-      if(!db.tx.some(t=>t.id===txId)&&!db.deleted.tx.includes(txId)){
-        db.tx.push({id:txId,d:d8,a:amt,t:'out',c:db.cats[0].id,p:pmId,m:merchant,ts:Date.now(),auto:true});
-        added++;
+      if(item){
+        const r=ingestItem(item,'auto-'+d.id,{pm:item.pmHit});
+        if(r==='added')added++; else if(r==='canceled')canceled++;
       }
       // 원본 인박스 문서는 삭제 (처리 완료)
       fbMod.deleteDoc(fbMod.doc(fsDb,'gagyebu_inbox',code,'items',d.id)).catch(()=>{});
     });
-    if(added){
+    if(added||canceled){
       persist(); render();
-      toast(`자동 등록 ${added}건이 들어왔어요`);
+      toast(added?`자동 등록 ${added}건이 들어왔어요`:`취소 ${canceled}건을 반영했어요`);
     }
   },err=>console.error('inbox watch',err));
+}
+
+/* ── 카드 승인 문자/알림 해석 ── */
+const CARD_CO=[['신한','신한'],['KB','국민'],['국민','국민'],['삼성','삼성'],['현대','현대'],['롯데','롯데'],
+  ['우리','우리'],['하나','하나'],['BC','비씨'],['비씨','비씨'],['NH','농협'],['농협','농협'],['씨티','씨티'],
+  ['IBK','기업'],['기업','기업'],['카카오','카카오'],['토스','토스'],['케이뱅크','케이뱅크'],['수협','수협'],
+  ['광주','광주'],['전북','전북'],['제주','제주'],['새마을','새마을'],['우체국','우체국'],['신협','신협']];
+const CO_RE=new RegExp('('+CARD_CO.map(c=>c[0]).join('|')+')','i');
+const HEADER_RE=/(카드|체크|신용).{0,20}(승인|취소)|^\s*\[?[^\s\d]{1,8}\]?\s*\(?\d{0,4}\)?\s*(승인|취소)/;
+
+// 여러 건이 한꺼번에 붙여넣어져도 한 건씩 나눈다
+function splitCardMsgs(text){
+  const blocks=String(text||'').replace(/\r/g,'').split(/\[Web발신\]|\n\s*\n/);
+  const out=[];
+  blocks.forEach(b=>{
+    let curLines=[];
+    b.split('\n').forEach(line=>{
+      if(HEADER_RE.test(line)&&curLines.some(l=>/[\d,]+\s*원/.test(l))){out.push(curLines.join('\n'));curLines=[]}
+      curLines.push(line);
+    });
+    if(curLines.join('').trim())out.push(curLines.join('\n'));
+  });
+  return out;
+}
+
+function parseCardMsg(text,now=new Date()){
+  const s=String(text||'').replace(/\r/g,'').replace(/\[Web발신\]/g,'').trim();
+  if(!s)return null;
+  // 금액: 누적·잔액·한도 뒤에 붙은 숫자는 제외하고 첫 번째 'n원'
+  let amount=0;
+  const amtRe=/([\d][\d,]*)\s*원/g; let m;
+  while((m=amtRe.exec(s))){
+    const before=s.slice(Math.max(0,m.index-6),m.index);
+    if(/누적|잔액|한도|포인트|적립|잔여/.test(before))continue;
+    amount=Number(m[1].replace(/,/g,'')); break;
+  }
+  if(!amount)return null;
+  const cancel=/취소/.test(s)&&!/승인\s*취소\s*불가/.test(s);
+
+  // 날짜: 11/24, 11.24, 2026/11/24 (시간 옆이나 단독)
+  let date=null;
+  const dm=s.match(/(?:(20\d{2})[\/.\-])?(\d{1,2})[\/.\-](\d{1,2})(?=\s|$|\d{1,2}:|[^\d])/);
+  if(dm){
+    const mo=+dm[2], da=+dm[3];
+    if(mo>=1&&mo<=12&&da>=1&&da<=31){
+      let y=dm[1]?+dm[1]:now.getFullYear();
+      let dt=new Date(y,mo-1,da);
+      if(!dm[1]&&dt-now>2*86400000)dt=new Date(y-1,mo-1,da); // 1월에 받은 12월 문자
+      date=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    }
+  }
+
+  // 카드사 + 끝 4자리
+  const co=(s.match(CO_RE)||[])[1]||'';
+  const last4=((s.match(/\((\d{3,4})\)|(\d{4})\s*(?:승인|취소)|\*(\d{3,4})/)||[]).slice(1).find(Boolean))||'';
+  const isCheck=/체크/.test(s);
+
+  // 가맹점: 알려진 조각을 지우고 남은 첫 덩어리
+  let rest=s.replace(/(누적|잔액|잔여한도|한도)[\s:]*-?[\d,]+\s*원[\s\S]*$/,'');
+  rest=rest.split('\n').map(line=>{
+    if(CO_RE.test(line)||/카드|체크/.test(line)){
+      line=line.replace(/^.*?(승인|취소)(?:\s*완료)?/,'');
+    }
+    return line;
+  }).join('\n');
+  rest=rest
+    .replace(/[\d][\d,]*\s*원/g,'\n')
+    .replace(/\(?\s*(일시불|\d{1,2}\s*개월|할부\s*\d*\s*개월?|체크|신용|승인|취소|결제|사용)\s*\)?/g,'\n')
+    .replace(/(?:20\d{2}[\/.\-])?\d{1,2}[\/.\-]\d{1,2}/g,'\n')
+    .replace(/\d{1,2}:\d{2}(:\d{2})?/g,'\n')
+    .replace(/\S{0,2}\*+\S{0,2}\s*님?/g,'\n')
+    .replace(/[\[\]\/|·:]+/g,'\n');
+  const pieces=rest.split('\n').map(x=>x.replace(/^[\s()\-,.]+|[\s()\-,.]+$/g,'').trim())
+    .filter(x=>x.length>=2&&!/^\d+$/.test(x)&&!/^(님|원|해외|국내|일시불|잔액|누적)$/.test(x));
+  const merchant=(pieces[0]||'').slice(0,40);
+  return {amount,merchant,date,co,last4,isCheck,cancel};
+}
+
+// 결제수단 찾기: 끝 4자리가 이름에 있으면 그걸로, 아니면 카드사 이름 + 체크/신용 구분
+function matchPM(p){
+  if(!p)return 'none';
+  if(p.last4){const h=db.pms.find(x=>x.name.includes(p.last4));if(h)return h.id}
+  if(!p.co)return 'none';
+  const ent=CARD_CO.filter(c=>c[0].toLowerCase()===p.co.toLowerCase());
+  const keys=[...new Set(ent.flatMap(c=>[c[0],c[1]]))].map(k=>k.toLowerCase());
+  const hits=db.pms.filter(x=>x.type!=='cash'&&keys.some(k=>x.name.toLowerCase().includes(k)));
+  if(!hits.length)return 'none';
+  const want=p.isCheck?'debit':'credit';
+  return (hits.find(x=>x.type===want)||hits[0]).id;
+}
+
+// 카테고리 짐작: 같은 가게를 전에 어디로 넣었는지 → 없으면 가게 이름 힌트 → 없으면 기타
+const CAT_HINTS=[
+  ['food',/커피|카페|스타벅스|이디야|메가|투썸|빽다방|컴포즈|배달|배민|요기요|쿠팡이츠|식당|김밥|치킨|피자|버거|맥도날드|롯데리아|버거킹|베이커리|파리바게|뚜레쥬르|이마트|홈플러스|롯데마트|마트|GS25|CU|세븐일레븐|편의점|이마트24|마켓컬리|컬리|정육|반찬|분식|국밥|떡볶이/i],
+  ['live',/다이소|올리브영|약국|병원|의원|치과|한의원|쿠팡|주유|택시|카카오T|교통|티머니|세탁|미용|헤어|무신사|지마켓|11번가|옥션|네이버페이/i],
+  ['edu',/학원|교습|서점|교보|yes24|예스24|알라딘|영풍|학습지|에듀|문구/i],
+  ['fixed',/관리비|통신|SKT|KT|LG U|유플러스|보험|가스|전기|수도|렌탈/i],
+  ['fun',/CGV|메가박스|롯데시네마|넷플릭스|유튜브|디즈니|티빙|웨이브|여행|호텔|숙박|야놀자|여기어때|놀이|키즈카페|노래|PC방|볼링/i]
+];
+function guessCat(merchant){
+  const has=id=>db.cats.some(c=>c.id===id);
+  const k=norm(merchant||'');
+  if(k){
+    let best=null;
+    db.tx.forEach(t=>{if(t.t==='out'&&norm(t.m)===k&&(!best||(t.ts||0)>(best.ts||0)))best=t});
+    if(best&&has(best.c))return best.c;
+  }
+  for(const [id,re] of CAT_HINTS)if(has(id)&&re.test(merchant||''))return id;
+  return has('etc')?'etc':db.cats[0].id;
+}
+
+// 이미 같은 날·같은 금액·같은 가게 기록이 있으면 중복으로 본다
+function findDup(item){
+  const k=norm(item.merchant||'');
+  return db.tx.find(t=>t.t==='out'&&t.d===item.date&&t.a===item.amount&&(!k||norm(t.m)===k));
+}
+// 취소 문자: 같은 금액·같은 가게의 가장 최근 지출을 찾는다
+function findCancelTarget(item){
+  const k=norm(item.merchant||'');
+  return db.tx.filter(t=>t.t==='out'&&t.a===item.amount&&(!k||norm(t.m)===k))
+    .sort((a,b)=>b.d.localeCompare(a.d))[0];
+}
+
+// 해석된 한 건을 장부에 반영. 반환: 'added' | 'canceled' | 'dup' | 'skip'
+function ingestItem(item,id,opts={}){
+  if(item.cancel){
+    const tgt=findCancelTarget(item);
+    if(!tgt)return 'skip';
+    db.tx=db.tx.filter(t=>t.id!==tgt.id); db.deleted.tx.push(tgt.id);
+    return 'canceled';
+  }
+  if(db.tx.some(t=>t.id===id)||db.deleted.tx.includes(id))return 'dup';
+  if(!opts.force&&findDup(item))return 'dup';
+  db.tx.push({id,d:item.date||ymd(new Date()),a:item.amount,t:'out',
+    c:opts.cat||guessCat(item.merchant),p:opts.pm||matchPM(item),
+    m:item.merchant||'카드 결제',ts:Date.now(),auto:true});
+  return 'added';
+}
+
+/* ── 붙여넣기로 한 번에 등록 ── */
+let pasteItems=[];
+function renderPastePreview(){
+  const box=$('paste-preview');
+  const text=$('paste-text').value;
+  pasteItems=splitCardMsgs(text).map(t=>parseCardMsg(t)).filter(Boolean).map(it=>{
+    const dup=!it.cancel&&!!findDup({...it,date:it.date||ymd(new Date())});
+    return {...it,date:it.date||ymd(new Date()),cat:guessCat(it.merchant),pm:matchPM(it),dup,on:!dup};
+  });
+  if(!text.trim()){box.innerHTML='';$('paste-save').style.display='none';return}
+  if(!pasteItems.length){
+    box.innerHTML='<p class="paste-none">금액(…원)이 있는 승인 문자를 찾지 못했어요</p>';
+    $('paste-save').style.display='none';return;
+  }
+  const catOpts=sel=>db.cats.map(c=>`<option value="${c.id}"${c.id===sel?' selected':''}>${esc(c.name)}</option>`).join('');
+  box.innerHTML='<div class="rows">'+pasteItems.map((it,i)=>`
+    <label class="prow${it.dup?' dup':''}">
+      <input type="checkbox" data-pi="${i}"${it.on?' checked':''}>
+      <span class="row-c">${fmtMD(dstr2date(it.date))}</span>
+      <span class="row-m">${it.cancel?'<span class="auto-badge cancel">취소</span>':''}${esc(it.merchant||'카드 결제')}
+        <span class="row-pm">${esc(pmName(it.pm))}${it.dup?' · 이미 있음':''}</span></span>
+      ${it.cancel?'':`<select data-pc="${i}" aria-label="카테고리">${catOpts(it.cat)}</select>`}
+      <span class="row-a num">${it.cancel?'+':'−'}${won(it.amount)}</span>
+    </label>`).join('')+'</div>';
+  box.querySelectorAll('[data-pi]').forEach(c=>c.onchange=()=>{pasteItems[c.dataset.pi].on=c.checked;updatePasteBtn()});
+  box.querySelectorAll('[data-pc]').forEach(s=>s.onchange=()=>{pasteItems[s.dataset.pc].cat=s.value});
+  updatePasteBtn();
+}
+function updatePasteBtn(){
+  const n=pasteItems.filter(x=>x.on).length;
+  $('paste-save').style.display='block';
+  $('paste-save').disabled=!n;
+  $('paste-save').textContent=n?`${n}건 등록하기`:'등록할 항목을 골라주세요';
+}
+async function savePaste(){
+  let added=0,canceled=0;
+  pasteItems.filter(x=>x.on).forEach((it,i)=>{
+    const r=ingestItem(it,'paste-'+Date.now()+'-'+i,{cat:it.cat,pm:it.pm,force:true});
+    if(r==='added')added++; else if(r==='canceled')canceled++;
+  });
+  await persist();
+  $('paste-text').value=''; renderPastePreview(); render();
+  toast(`${added}건 등록${canceled?`, ${canceled}건 취소 반영`:''}했어요`);
+}
+
+/* ── 자동 등록 설정 안내 ── */
+function inboxURL(){
+  if(!syncCfg||!syncCfg.config)return '';
+  const c=syncCfg.config;
+  return `https://firestore.googleapis.com/v1/projects/${c.projectId}/databases/(default)/documents/gagyebu_inbox/${encodeURIComponent(syncCfg.code)}/items?key=${c.apiKey}`;
+}
+function renderAutoGuide(connected){
+  $('auto-off').style.display=connected?'none':'block';
+  $('auto-on').style.display=connected?'block':'none';
+  if(connected)$('auto-url').value=inboxURL();
+}
+async function copyText(v,msg){
+  try{await navigator.clipboard.writeText(v)}catch(e){
+    const ta=document.createElement('textarea');ta.value=v;document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');ta.remove();
+  }
+  toast(msg||'복사했어요');
 }
 
 const DEFAULT_CATS=[
@@ -1287,6 +1609,24 @@ function bindEvents(){
   };
   $('import').onclick=()=>$('file').click();
   $('file').onchange=doImport;
+  $('paste-toggle').onclick=()=>{
+    const box=$('paste-box'); box.classList.toggle('on');
+    if(box.classList.contains('on'))$('paste-text').focus();
+  };
+  $('paste-text').addEventListener('input',renderPastePreview);
+  $('paste-clip').onclick=async()=>{
+    try{
+      const t=await navigator.clipboard.readText();
+      if(!t)return toast('클립보드가 비어 있어요');
+      const cur=$('paste-text').value.trim();
+      $('paste-text').value=cur?cur+'\n\n'+t:t;
+      renderPastePreview();
+    }catch(e){toast('입력칸을 길게 눌러 붙여넣어 주세요')}
+  };
+  $('paste-clear').onclick=()=>{$('paste-text').value='';renderPastePreview()};
+  $('paste-save').onclick=savePaste;
+  $('auto-url-copy').onclick=()=>copyText($('auto-url').value,'주소를 복사했어요');
+  $('auto-body-copy').onclick=()=>copyText($('auto-body').value,'내용을 복사했어요');
   $('sync-connect').onclick=async()=>{
     const code=$('sync-code').value.trim();
     const cfg=parseFirebaseConfig($('sync-cfg').value);
