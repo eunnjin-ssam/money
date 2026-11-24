@@ -179,6 +179,7 @@ header{padding:20px 0 8px}
 .pmrow .am{font-size:15px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pmrow .rm{border:0;background:transparent;color:#CDD2CB;font-size:15px;cursor:pointer;padding:0 0 0 2px;line-height:1}
 .pmrow .rm:active{color:var(--spend)}
+.pmrow .pm-rename{margin-left:10px}
 .credit-note{
   border-top:1px dashed var(--rule);padding:13px 0 14px;
   font-size:13px;color:var(--ink-soft);line-height:1.55;
@@ -1474,6 +1475,16 @@ async function addPM(){
   renderPMs(); render(); toast(`${name} 추가했어요`);
 }
 
+// 카드 이름만 바꾼다 — id는 그대로라 기존 기록이 모두 새 이름으로 보인다
+async function renamePM(id){
+  const p=pmOf(id); if(!p)return;
+  const name=(prompt(`'${p.name}'의 새 이름을 적어주세요.\n자동 등록이 카드를 알아보도록 카드사 이름(예: 국민, 현대)을 넣어주세요.`,p.name)||'').trim();
+  if(!name||name===p.name)return;
+  p.name=name.slice(0,20); p.ts=Date.now();
+  await persist();
+  renderPMs(); render(); toast(`'${p.name}'(으)로 바꿨어요`);
+}
+
 async function delPM(id){
   const p=pmOf(id); if(!p)return;
   const used=db.tx.filter(t=>t.p===id).length;
@@ -2071,6 +2082,7 @@ function renderPMList(out,isThis){
         <div class="nm">${esc(p.name)}<em>${PMTYPE[p.type]||''}</em></div>
         <div class="cnt">${p.n?`${p.n}건 · 전체의 ${total?Math.round(p.sum/total*100):0}%`:'사용 없음'}</div>
         ${cnt?`<button class="pm-expand" data-pmexp="${p.id}">${expanded?'▲ 접기':expandLabel}</button>`:''}
+        ${p.id!=='none'?`<button class="pm-expand pm-rename" data-renpm="${p.id}">✎ 이름 바꾸기</button>`:''}
       </div>
       <span class="am num">${won(p.sum)}원</span>
       ${p.id!=='none'?`<button class="rm" data-rmpm="${p.id}" aria-label="${esc(p.name)} 삭제">×</button>`:''}
@@ -2087,6 +2099,7 @@ function renderPMList(out,isThis){
   html+='</div>';
   $('pmlist').innerHTML=html;
   $('pmlist').querySelectorAll('[data-rmpm]').forEach(b=>b.onclick=()=>delPM(b.dataset.rmpm));
+  $('pmlist').querySelectorAll('[data-renpm]').forEach(b=>b.onclick=()=>renamePM(b.dataset.renpm));
   $('pmlist').querySelectorAll('[data-pmexp]').forEach(b=>b.onclick=()=>{
     expandedPm=expandedPm===b.dataset.pmexp?null:b.dataset.pmexp;
     render();
