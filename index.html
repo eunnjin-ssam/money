@@ -560,6 +560,26 @@ section{margin-top:26px}
 .auto-card ol b{color:var(--ink)}
 .auto-card code{font-family:ui-monospace,monospace;font-size:11.5px;background:#F3F5F1;padding:1px 4px;border-radius:4px;word-break:break-all}
 
+
+/* ── 그 자리 수정 ── */
+.editing-row{background:#F6F7F3}
+.iedit{border-top:1px dashed var(--rule);padding:10px 0 12px;display:flex;flex-direction:column;gap:7px}
+.iedit input,.iedit select{
+  width:100%;min-width:0;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;
+  font-family:inherit;font-size:14px;background:#FBFBF9;color:var(--ink);outline:none;
+}
+.iedit input:focus,.iedit select:focus{border-color:var(--ink)}
+.ie-amt{display:flex;align-items:center;gap:6px}
+.ie-amt input{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.ie-amt span{font-size:14px;color:var(--ink-soft);font-weight:600}
+.ie-2{display:flex;gap:6px}
+.ie-2 select{flex:1 1 0}
+.ie-2 input[type=date]{flex:1.2 1 0;font-size:13px;padding:8px 6px}
+.ie-btns{display:flex;gap:6px}
+.ie-btns button{flex:1;border-radius:8px;padding:9px;font-family:inherit;font-size:13.5px;cursor:pointer}
+.ie-del{flex:0 0 auto!important;border:1px solid var(--rule);background:transparent;color:var(--spend)}
+.ie-cancel{border:1px solid var(--rule);background:transparent;color:var(--ink-soft)}
+.ie-save{border:0;background:var(--tap);color:#fff;font-weight:700}
 .tools{display:flex;gap:8px;margin-top:12px}
 .tools button{
   flex:1;border:1px solid var(--rule);background:transparent;border-radius:10px;
@@ -1886,6 +1906,7 @@ function render(){
   $('cnt').textContent=rows.length?`${rows.length}건`:'';
   renderList(rows);
   renderQuick();
+  restoreInlineEdit();
 }
 
 /* 핵심: 반복되는 소액 지출 찾기 */
@@ -2104,10 +2125,7 @@ function renderPMList(out,isThis){
     expandedPm=expandedPm===b.dataset.pmexp?null:b.dataset.pmexp;
     render();
   });
-  $('pmlist').querySelectorAll('.cd-row[data-edit]').forEach(r=>{
-    r.onclick=()=>startEdit(r.dataset.edit);
-    r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();startEdit(r.dataset.edit)}};
-  });
+  bindInlineRows($('pmlist'),'.cd-row[data-edit]');
   $('pmlist').querySelectorAll('[data-bd]').forEach(inp=>{
     inp.onclick=e=>e.stopPropagation();
     inp.onchange=async()=>{
@@ -2185,10 +2203,7 @@ function renderBars(out){
     expandedCat=expandedCat===b.dataset.exp?null:b.dataset.exp;
     render();
   });
-  $('bars').querySelectorAll('.cd-row[data-edit]').forEach(r=>{
-    r.onclick=()=>startEdit(r.dataset.edit);
-    r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();startEdit(r.dataset.edit)}};
-  });
+  bindInlineRows($('bars'),'.cd-row[data-edit]');
 }
 
 async function addCat(){
@@ -2243,10 +2258,93 @@ function dayBlock(d,list){
 
 function bindListRows(){
   $('list').querySelectorAll('[data-del]').forEach(b=>b.onclick=e=>{e.stopPropagation();del(b.dataset.del)});
-  $('list').querySelectorAll('[data-edit]').forEach(r=>{
-    r.onclick=()=>startEdit(r.dataset.edit);
-    r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();startEdit(r.dataset.edit)}};
+  bindInlineRows($('list'),'.row[data-edit]');
+}
+
+/* ── 그 자리에서 수정 (입력 탭으로 넘어가지 않음) ──
+   inlineEdit = {id, box(어느 목록), draft(입력 중이던 값)}.
+   동기화 등으로 화면이 다시 그려져도 draft로 수정칸을 되살린다. */
+let inlineEdit=null;
+function bindInlineRows(container,sel){
+  container.querySelectorAll(sel).forEach(r=>{
+    const open=()=>toggleInlineEdit(r,container.id);
+    r.onclick=e=>{if(e.target.closest('[data-del]'))return;open()};
+    r.onkeydown=e=>{if(e.target!==r)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}};
   });
+}
+function closeInlineEdit(){
+  document.querySelectorAll('.iedit').forEach(x=>x.remove());
+  document.querySelectorAll('.editing-row').forEach(x=>x.classList.remove('editing-row'));
+  inlineEdit=null;
+}
+function toggleInlineEdit(rowEl,boxId){
+  const id=rowEl.dataset.edit;
+  if(inlineEdit&&inlineEdit.id===id&&inlineEdit.box===boxId){closeInlineEdit();return}
+  closeInlineEdit();
+  const t=db.tx.find(x=>x.id===id); if(!t)return;
+  inlineEdit={id,box:boxId,draft:{a:won(t.a),m:t.m,d:t.d,c:t.c,p:t.p}};
+  mountInlineEdit(rowEl);
+}
+function mountInlineEdit(rowEl){
+  const t=db.tx.find(x=>x.id===inlineEdit.id); if(!t){inlineEdit=null;return}
+  const dr=inlineEdit.draft;
+  const isOut=t.t==='out';
+  const catOpts=db.cats.map(c=>`<option value="${c.id}"${c.id===dr.c?' selected':''}>${esc(c.name)}</option>`).join('');
+  const pmOpts=[...db.pms.map(p=>`<option value="${p.id}"${p.id===dr.p?' selected':''}>${esc(p.name)}</option>`),
+    `<option value="none"${!pmOf(dr.p)?' selected':''}>미지정</option>`].join('');
+  const box=document.createElement('div');
+  box.className='iedit';
+  box.innerHTML=`
+    <div class="ie-amt"><input data-f="a" type="text" inputmode="numeric" value="${esc(dr.a)}" aria-label="금액"><span>원</span></div>
+    <input data-f="m" type="text" value="${esc(dr.m)}" placeholder="내용" aria-label="내용">
+    <div class="ie-2">
+      ${isOut?`<select data-f="c" aria-label="카테고리">${catOpts}</select>`:''}
+      ${isOut?`<select data-f="p" aria-label="결제수단">${pmOpts}</select>`:''}
+      <input data-f="d" type="date" value="${esc(dr.d)}" aria-label="날짜">
+    </div>
+    <div class="ie-btns">
+      <button class="ie-del" data-act="del">삭제</button>
+      <button class="ie-cancel" data-act="cancel">취소</button>
+      <button class="ie-save" data-act="save">저장</button>
+    </div>`;
+  rowEl.after(box);
+  rowEl.classList.add('editing-row');
+  box.onclick=e=>e.stopPropagation();
+  box.querySelectorAll('[data-f]').forEach(el=>{
+    const ev=el.tagName==='SELECT'||el.type==='date'?'change':'input';
+    el.addEventListener(ev,()=>{
+      if(el.dataset.f==='a'){const raw=el.value.replace(/[^\d]/g,'');el.value=raw?Number(raw).toLocaleString('ko-KR'):''}
+      if(inlineEdit)inlineEdit.draft[el.dataset.f]=el.value;
+    });
+    if(el.tagName==='INPUT')el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveInlineEdit()}});
+  });
+  box.querySelector('[data-act="save"]').onclick=saveInlineEdit;
+  box.querySelector('[data-act="cancel"]').onclick=closeInlineEdit;
+  box.querySelector('[data-act="del"]').onclick=async()=>{
+    if(!confirm('이 기록을 지울까요?'))return;
+    const id=inlineEdit.id; inlineEdit=null; await del(id);
+  };
+}
+async function saveInlineEdit(){
+  if(!inlineEdit)return;
+  const t=db.tx.find(x=>x.id===inlineEdit.id); if(!t){closeInlineEdit();return}
+  const dr=inlineEdit.draft;
+  const amt=Number(String(dr.a).replace(/[^\d]/g,''));
+  if(!amt)return toast('금액을 입력해 주세요');
+  t.a=amt;
+  t.m=(dr.m||'').trim()||t.m;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(dr.d))t.d=dr.d;
+  if(t.t==='out'){t.c=dr.c;t.p=dr.p}
+  t.ts=Date.now();
+  inlineEdit=null;
+  await persist(); render(); toast('수정했어요');
+}
+// 화면을 다시 그린 뒤, 수정 중이던 칸이 있으면 같은 자리에 되살린다
+function restoreInlineEdit(){
+  if(!inlineEdit)return;
+  const box=$(inlineEdit.box);
+  const row=box&&[...box.querySelectorAll('[data-edit]')].find(r=>r.dataset.edit===inlineEdit.id);
+  if(row&&db.tx.some(x=>x.id===inlineEdit.id))mountInlineEdit(row); else inlineEdit=null;
 }
 
 function renderList(rows){
