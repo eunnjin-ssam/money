@@ -531,8 +531,20 @@ section{margin-top:26px}
 .prow .row-a{font-size:13.5px}
 .auto-badge.cancel{background:#F3EDEB;color:var(--spend)}
 #paste-save{display:none}
-.auto-log-wrap{border-top:1px dashed var(--rule);padding-top:10px;margin-top:4px}
-.auto-log-wrap h3{font-size:13.5px;font-weight:700;margin-bottom:6px}
+.auto-status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);line-height:1.5}
+.auto-status b{color:var(--ink);font-weight:700}
+.st-dot{flex:0 0 auto;width:8px;height:8px;border-radius:99px;background:var(--ink-faint)}
+.st-dot.on{background:var(--save)}
+.st-dot.warn{background:var(--warn)}
+.auto-fold{border-top:1px dashed var(--rule);margin-top:11px;padding-top:10px}
+.auto-fold > summary{font-size:13.5px;font-weight:700;cursor:pointer;color:var(--ink)}
+.auto-fold[open] > summary{margin-bottom:8px}
+.auto-fold details{border-top:0;padding:6px 0 2px}
+.auto-fold details summary{font-size:13px;font-weight:600;color:var(--ink-soft)}
+.auto-log-clear{
+  margin-top:8px;width:100%;border:1px dashed var(--rule);background:transparent;border-radius:8px;padding:8px;
+  font-family:inherit;font-size:12.5px;color:var(--ink-faint);cursor:pointer;
+}
 .logrow{padding:8px 0}
 .logrow + .logrow{border-top:1px dashed var(--rule)}
 .log-top{display:flex;justify-content:space-between;align-items:center}
@@ -824,50 +836,53 @@ footer{text-align:center;padding:30px 0 10px;font-size:12px;color:var(--ink-fain
     </p>
   </div>
   <div class="auto-card" id="auto-on" style="display:none">
-    <p class="sync-help">
-      폰이 카드 승인 알림(또는 문자)을 아래 주소로 보내면, 가계부가 금액·가게·카드를 읽어서 <b>자동</b> 표시로 등록해요.
-      카테고리는 같은 가게를 전에 넣었던 곳으로 알아서 고르고, 취소 문자가 오면 해당 기록을 지워요.
-    </p>
-    <label class="k">보낼 주소 (POST)</label>
-    <div class="copyrow"><input id="auto-url" type="text" readonly aria-label="보낼 주소"><button id="auto-url-copy">복사</button></div>
-    <label class="k">보낼 내용 (JSON) — MacroDroid 본문에 그대로 붙여넣기</label>
-    <div class="copyrow"><input id="auto-body" type="text" readonly value='{"fields":{"text":{"stringValue":"{lv=msg}"}}}' aria-label="보낼 내용"><button id="auto-body-copy">복사</button></div>
+    <div class="auto-status" id="auto-status"></div>
 
-    <details open>
-      <summary>안드로이드 — 카드사 앱 알림을 자동으로 (MacroDroid)</summary>
-      <ol>
-        <li>Play 스토어에서 <b>MacroDroid</b> 설치 → 실행 후 <b>알림 접근 허용</b>을 요청하면 허용</li>
-        <li><b>매크로 추가</b> → 트리거 <b>＋</b> → <b>알림 → 알림 수신</b> → 쓰는 카드사 앱을 모두 체크 (예: 신한 SOL페이, KB Pay, 현대카드) → 텍스트 내용은 <b>모든 내용</b></li>
-        <li><b>로컬 변수 ＋</b> → 종류 <b>문자열</b>, 이름 <code>msg</code></li>
-        <li>액션 <b>＋</b> → <b>변수 → 텍스트 조작</b>
-          <br>· 텍스트: <code>[not_title] / [notification]</code> (매직 텍스트 버튼으로 넣기)
-          <br>· 작업: <b>모두 바꾸기</b>, <b>정규식</b> 켜기, 찾을 값 <code>[\n\r"\\]</code>, 바꿀 값은 공백 한 칸
-          <br>· 결과 저장: <code>msg</code>
-          <br><span style="color:var(--ink-faint)">(알림 속 줄바꿈·따옴표 때문에 전송이 깨지는 걸 막는 단계예요)</span></li>
-        <li>액션 <b>＋</b> → <b>웹 상호작용 → HTTP 요청</b>
-          <br>· 방법 <b>POST</b>, URL에 위의 <b>보낼 주소</b>
-          <br>· 본문 콘텐츠 유형 <code>application/json</code>, 본문에 위의 <b>보낼 내용</b></li>
-        <li>이름을 ‘가계부’로 저장. 카드를 한 번 쓰면 아래 <b>최근 받은 알림</b>에 나타나요.</li>
-        <li><b>휴대폰 설정 → 애플리케이션 → MacroDroid → 배터리 → 제한 없음</b>으로 바꿔주세요. 안 그러면 절전 때문에 가끔 알림을 놓쳐요.</li>
-      </ol>
-      <p class="sync-help" style="margin:6px 0 0">카드사 광고·혜택·결제 예정 알림은 가계부가 알아서 걸러요. 카드를 등록할 때 이름에 카드사를 넣어두면(예: ‘신한 신용’, ‘국민 체크’) 결제수단도 자동으로 맞춰져요.</p>
-    </details>
-
-    <details>
-      <summary>아이폰 — 문자로 받는 경우 (단축어)</summary>
-      <ol>
-        <li><b>단축어</b> 앱 → <b>자동화</b> → <b>＋</b> → <b>메시지</b> → 메시지 내용에 <b>승인</b> → <b>즉시 실행</b></li>
-        <li><b>URL 콘텐츠 가져오기</b> 동작 추가 → URL에 위의 보낼 주소, 방법 <b>POST</b>, 요청 본문 <b>JSON</b></li>
-        <li>필드: 사전 <code>fields</code> → 사전 <code>text</code> → 텍스트 <code>stringValue</code> = <b>단축어 입력</b></li>
-      </ol>
-      <p class="sync-help" style="margin:6px 0 0">아이폰은 카드사 앱 알림을 읽을 수 없어 문자만 됩니다.</p>
-    </details>
-
-    <div class="auto-log-wrap">
-      <h3>최근 받은 알림</h3>
+    <details class="auto-fold" id="auto-log-fold">
+      <summary>최근 받은 알림</summary>
       <div id="auto-log"></div>
-    </div>
-    <p class="sync-help" style="margin:10px 0 0">들어오지 않으면 Firebase 콘솔 → Firestore → <b>규칙</b>에서 <code>gagyebu_inbox</code> 쓰기가 허용돼 있는지 확인하세요. 이 주소에는 접속 정보가 들어 있으니 다른 사람에게 보내지 마세요.</p>
+      <button class="auto-log-clear" id="auto-log-clear">기록 지우기</button>
+    </details>
+
+    <details class="auto-fold" id="auto-guide-fold">
+      <summary>설정 방법 보기</summary>
+      <p class="sync-help">
+        폰이 카드 승인 알림(또는 문자)을 아래 주소로 보내면, 가계부가 금액·가게·카드를 읽어서 <b>자동</b> 표시로 등록해요.
+        광고·결제 예정 알림은 걸러내고, 취소 알림이 오면 해당 기록을 지워요.
+      </p>
+      <label class="k">보낼 주소 (POST)</label>
+      <div class="copyrow"><input id="auto-url" type="text" readonly aria-label="보낼 주소"><button id="auto-url-copy">복사</button></div>
+      <label class="k">보낼 내용 (JSON)</label>
+      <div class="copyrow"><input id="auto-body" type="text" readonly value='{"fields":{"text":{"stringValue":"{lv=msg}"}}}' aria-label="보낼 내용"><button id="auto-body-copy">복사</button></div>
+
+      <details>
+        <summary>안드로이드 — 카드사 앱 알림 (MacroDroid)</summary>
+        <ol>
+          <li>Play 스토어에서 <b>MacroDroid</b> 설치 → <b>알림 접근 허용</b></li>
+          <li><b>매크로 추가</b> → 트리거 <b>＋</b> → <b>알림 수신</b> → 카드사 앱 체크 (예: KB Pay, 현대카드), 내용은 <b>모든 알림</b></li>
+          <li><b>전용 변수 ＋</b> → <b>문자열</b>, 이름 <code>msg</code></li>
+          <li>동작 <b>＋</b> → <b>텍스트 편집·변형 → 찾아서 교체</b>
+            <br>· 원문: […] 버튼으로 <b>알림 제목</b>, <code>/</code>, <b>알림 텍스트</b> → <code>{not_title}/{notification}</code>
+            <br>· 찾을 RegEx: <code>[\n\r"\\]</code>
+            <br>· 바꿀 내용: 공백 한 칸 · ‘\n을 줄 바꿈으로 변환’은 <b>끄기</b>
+            <br>· 변수에 저장: <code>msg</code></li>
+          <li>동작 <b>＋</b> → <b>HTTP 요청</b> → 방법 <b>POST</b>, URL에 <b>보낼 주소</b>, 본문 유형 <code>application/json</code>, 본문에 <b>보낼 내용</b>
+            <br><span style="color:var(--ink-faint)">(찾아서 교체가 HTTP 요청보다 위에 있어야 해요)</span></li>
+          <li>휴대폰 <b>설정 → 애플리케이션 → MacroDroid → 배터리 → 제한 없음</b></li>
+        </ol>
+      </details>
+
+      <details>
+        <summary>아이폰 — 문자로 받는 경우 (단축어)</summary>
+        <ol>
+          <li><b>단축어</b> 앱 → <b>자동화</b> → <b>＋</b> → <b>메시지</b> → 메시지 내용에 <b>승인</b> → <b>즉시 실행</b></li>
+          <li><b>URL 콘텐츠 가져오기</b> → URL에 보낼 주소, 방법 <b>POST</b>, 요청 본문 <b>JSON</b></li>
+          <li>필드: 사전 <code>fields</code> → 사전 <code>text</code> → 텍스트 <code>stringValue</code> = <b>단축어 입력</b></li>
+        </ol>
+        <p class="sync-help" style="margin:6px 0 0">아이폰은 카드사 앱 알림을 읽을 수 없어 문자만 됩니다.</p>
+      </details>
+      <p class="sync-help" style="margin:10px 0 0">들어오지 않으면 Firebase 콘솔 → Firestore → <b>규칙</b>에서 <code>gagyebu_inbox</code> 쓰기가 허용돼 있는지 확인하세요. 이 주소에는 접속 정보가 들어 있으니 다른 사람에게 보내지 마세요.</p>
+    </details>
   </div>
 </section>
 
@@ -1351,10 +1366,33 @@ function logInbox(text,r,item){
   store.set(inboxLog,LOG_KEY);
   renderInboxLog();
 }
+let autoFoldInit=false, inboxLogLoaded=false;
+function renderAutoStatus(){
+  const el=$('auto-status'); if(!el)return;
+  const last=inboxLog[0];
+  const weekAgo=Date.now()-7*DAY;
+  const n7=db.tx.filter(t=>t.auto&&String(t.id).startsWith('auto-')&&(t.ts||0)>=weekAgo).length;
+  const everAdded=inboxLog.some(x=>x.r==='added'||x.r==='canceled'||x.r==='dup')||db.tx.some(t=>String(t.id).startsWith('auto-'));
+  if(!last){
+    el.innerHTML='<span class="st-dot off"></span><span>아직 받은 알림이 없어요</span>';
+  }else{
+    const t=new Date(last.at);
+    const when=`${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+    el.innerHTML=`<span class="st-dot ${everAdded?'on':'warn'}"></span><span><b>${everAdded?'작동 중':'알림은 오는데 등록된 결제가 없어요'}</b> · 마지막 알림 ${when}${n7?` · 최근 7일 ${n7}건 등록`:''}</span>`;
+  }
+  // 처음 그릴 때만: 아직 한 번도 안 들어왔으면 설정 방법을, 알림은 오는데 등록이 없으면 기록을 펼쳐 둔다
+  if(!autoFoldInit&&inboxLogLoaded){
+    autoFoldInit=true;
+    if(!last)$('auto-guide-fold').open=true;
+    else if(!everAdded)$('auto-log-fold').open=true;
+  }
+}
 function renderInboxLog(){
+  renderAutoStatus();
   const el=$('auto-log'); if(!el)return;
+  $('auto-log-clear').style.display=inboxLog.length?'block':'none';
   if(!inboxLog.length){el.innerHTML='<p class="paste-none">아직 받은 알림이 없어요. 카드를 한 번 쓰거나 MacroDroid에서 매크로를 테스트해 보세요.</p>';return}
-  el.innerHTML=inboxLog.map(x=>{
+  el.innerHTML=inboxLog.slice(0,5).map(x=>{
     const t=new Date(x.at);
     return `<div class="logrow">
       <div class="log-top"><span class="log-r ${x.r}">${LOG_LABEL[x.r]||x.r}</span>
@@ -1483,7 +1521,7 @@ async function init(){
   $('date').value=ymd(new Date());
   $('cycle-start').value=db.cycleStart;
   renderCats(); renderPMs(); bindEvents(); render();
-  inboxLog=(await store.get(LOG_KEY))||[]; renderInboxLog();
+  inboxLog=(await store.get(LOG_KEY))||[]; inboxLogLoaded=true; renderInboxLog();
 
   const hashConnected=await tryHashSync();
   if(!hashConnected){
@@ -1759,6 +1797,10 @@ function bindEvents(){
   };
   $('paste-clear').onclick=()=>{$('paste-text').value='';renderPastePreview()};
   $('paste-save').onclick=savePaste;
+  $('auto-log-clear').onclick=async()=>{
+    if(!confirm('최근 받은 알림 기록을 지울까요? 가계부 내역은 그대로 남아요.'))return;
+    inboxLog=[]; await store.set(inboxLog,LOG_KEY); renderInboxLog(); toast('기록을 지웠어요');
+  };
   $('auto-url-copy').onclick=()=>copyText($('auto-url').value,'주소를 복사했어요');
   $('auto-body-copy').onclick=()=>copyText($('auto-body').value,'내용을 복사했어요');
   $('sync-connect').onclick=async()=>{
@@ -1940,6 +1982,7 @@ function render(){
   renderList(rows);
   renderQuick();
   restoreInlineEdit();
+  renderAutoStatus();
 }
 
 /* 핵심: 반복되는 소액 지출 찾기 */
